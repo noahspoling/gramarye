@@ -1,0 +1,103 @@
+cmake_minimum_required(VERSION 3.27)
+project(rayui C)
+set(CMAKE_C_STANDARD 99)
+
+# WebAssembly toggle (must be before fetching raylib)
+option(BUILD_WEB "Build with Emscripten (WebAssembly)" OFF)
+
+# When building for web (via -DBUILD_WEB=ON or emcmake), set platform and output suffix
+if(EMSCRIPTEN OR BUILD_WEB)
+    # Ensure raylib configures for Web before it's fetched/built
+    set(PLATFORM Web CACHE STRING "" FORCE)
+    # Make final output an .html launcher
+    set(CMAKE_EXECUTABLE_SUFFIX ".html")
+endif()
+
+# Adding Raylib
+include(FetchContent)
+set(FETCHCONTENT_QUIET FALSE)
+set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # don't build the supplied examples
+set(BUILD_GAMES    OFF CACHE BOOL "" FORCE) # don't build the supplied example games
+
+FetchContent_Declare(
+    raylib
+    GIT_REPOSITORY "https://github.com/raysan5/raylib.git"
+    GIT_TAG "5.5"
+    GIT_PROGRESS TRUE
+    GIT_SHALLOW TRUE
+)
+
+FetchContent_MakeAvailable(raylib)
+
+FetchContent_Declare(
+    sxml
+    GIT_REPOSITORY "https://github.com/capmar/sxml.git"
+    GIT_TAG "master"
+    GIT_PROGRESS TRUE
+    GIT_SHALLOW TRUE
+)
+
+FetchContent_GetProperties(sxml)
+if(NOT sxml_POPULATED)
+    FetchContent_Populate(sxml)
+    add_library(sxml STATIC ${sxml_SOURCE_DIR}/sxml.c)
+    target_include_directories(sxml PUBLIC ${sxml_SOURCE_DIR})
+endif()
+
+file(GLOB SRC_FILES "src/*.c")
+file(GLOB COMPONENT_FILES "src/components/*.c")
+file(GLOB SYSTEM_FILES "src/systems/*.c")
+file(GLOB SCREEN_FILES "src/systems/screens/*.c")
+# UI files
+file(GLOB UI_FILES "src/ui/*.c")
+file(GLOB UI_SCREEN_FILES "src/ui/screens/*.c")
+file(GLOB UI_ELEMENT_FILES "src/ui/elements/*.c")
+
+message(STATUS "SRC_FILES: ${SRC_FILES} 
+                COMPONENT_FILES: ${COMPONENT_FILES} 
+                SYSTEM_FILES: ${SYSTEM_FILES} 
+                SCREEN_FILES: ${SCREEN_FILES}
+                UI_FILES: ${UI_FILES}"
+)
+add_executable(hello_world ${SRC_FILES} 
+                           ${COMPONENT_FILES} 
+                           ${SYSTEM_FILES} 
+                           ${SCREEN_FILES}
+                           ${UI_FILES}
+)
+
+# Web-specific compile/link options for your app
+if(EMSCRIPTEN OR BUILD_WEB)
+    target_compile_definitions(hello_world PUBLIC PLATFORM_WEB)
+    target_link_options(hello_world PRIVATE
+        -sASYNCIFY
+        -sALLOW_MEMORY_GROWTH=1
+    -sFORCE_FILESYSTEM=1
+        # Uncomment to package assets into the .data file:
+    --preload-file ${CMAKE_SOURCE_DIR}/resources@resources
+        # Optional: use Emscripten default shell page, or supply raylib's custom shell:
+        # --shell-file ${raylib_SOURCE_DIR}/src/shell.html
+    )
+endif()
+
+target_compile_options(hello_world PUBLIC)
+target_include_directories(hello_world PUBLIC 
+                                ./include 
+                                ./include/components 
+                                ./include/systems 
+                                ./include/systems/screens
+                                ./include/ui)
+
+target_link_libraries(hello_world PUBLIC raylib sxml)
+if(MSVC)
+  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+else()
+  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+  set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
+endif()
+
+add_custom_command(
+        TARGET hello_world POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources
+        ${CMAKE_CURRENT_BINARY_DIR}/resources)
