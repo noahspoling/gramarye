@@ -10,8 +10,6 @@ typedef struct {
     int height;
 } GameWindow;
 
-
-
 void InitGameWindow(GameWindow *window) {
     SetTraceLogLevel(LOG_DEBUG);
     InitWindow(window->width, window->height, "raylib [core] example - basic window");

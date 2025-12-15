@@ -1,5 +1,17 @@
 {
     "files.associations": {
-        "*.m": "c"
+        "*.m": "c",
+        "pointer_logic.h": "c",
+        "assert.h": "c",
+        "stdio.h": "c",
+        "bar_value.h": "c",
+        "except.h": "c",
+        "stdbool.h": "c",
+        "raylib.h": "c",
+        "array.h": "c",
+        "tilemap.h": "c",
+        "button.h": "c",
+        "arena.h": "c",
+        "coord.h": "c"
     }
 }

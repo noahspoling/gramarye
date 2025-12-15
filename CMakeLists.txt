@@ -45,6 +45,8 @@ if(NOT sxml_POPULATED)
 endif()
 
 file(GLOB SRC_FILES "src/*.c")
+file(GLOB CORE_FILES "src/core/*.c")
+file(GLOB HASH_FILES "src/core/hash/*.c")
 file(GLOB COMPONENT_FILES "src/components/*.c")
 file(GLOB SYSTEM_FILES "src/systems/*.c")
 file(GLOB SCREEN_FILES "src/systems/screens/*.c")
@@ -52,24 +54,39 @@ file(GLOB SCREEN_FILES "src/systems/screens/*.c")
 file(GLOB UI_FILES "src/ui/*.c")
 file(GLOB UI_SCREEN_FILES "src/ui/screens/*.c")
 file(GLOB UI_ELEMENT_FILES "src/ui/elements/*.c")
+file(GLOB UI_SHARED_FILES "src/ui/shared/*.c")
+file(GLOB UI_LAYOUT_FILES "src/ui/layout/*.c")
 
+#Adding files to core executable to share in multi executable setup
+
+# TODO Reorganize this for segmenting by target executable
 message(STATUS "SRC_FILES: ${SRC_FILES} 
+                CORE_FILES: ${CORE_FILES}
+                HASH_FILES: ${HASH_FILES}
                 COMPONENT_FILES: ${COMPONENT_FILES} 
                 SYSTEM_FILES: ${SYSTEM_FILES} 
                 SCREEN_FILES: ${SCREEN_FILES}
-                UI_FILES: ${UI_FILES}"
+                UI_FILES: ${UI_FILES}
+                UI_ELEMENT_FILES: ${UI_ELEMENT_FILES}
+                UI_SHARED_FILES: ${UI_SHARED_FILES}
+                UI_LAYOUT_FILES: ${UI_LAYOUT_FILES}"
 )
-add_executable(hello_world ${SRC_FILES} 
+add_executable(game ${SRC_FILES} 
+                           ${CORE_FILES}
+                           ${HASH_FILES}
                            ${COMPONENT_FILES} 
                            ${SYSTEM_FILES} 
                            ${SCREEN_FILES}
                            ${UI_FILES}
+                           ${UI_ELEMENT_FILES}
+                           ${UI_SHARED_FILES}
+                           ${UI_LAYOUT_FILES}
 )
 
 # Web-specific compile/link options for your app
 if(EMSCRIPTEN OR BUILD_WEB)
-    target_compile_definitions(hello_world PUBLIC PLATFORM_WEB)
-    target_link_options(hello_world PRIVATE
+    target_compile_definitions(game PUBLIC PLATFORM_WEB)
+    target_link_options(game PRIVATE
         -sASYNCIFY
         -sALLOW_MEMORY_GROWTH=1
     -sFORCE_FILESYSTEM=1
@@ -80,15 +97,25 @@ if(EMSCRIPTEN OR BUILD_WEB)
     )
 endif()
 
-target_compile_options(hello_world PUBLIC)
-target_include_directories(hello_world PUBLIC 
+# Core Include
+# target_include_directories(core PRIVATE ${CMAKE_SOURCE_DIR}/include
+#                                                            ./include/core)
+
+# Game Include
+target_compile_options(game PUBLIC)
+target_link_libraries(game PUBLIC raylib sxml)
+target_include_directories(game PUBLIC 
                                 ./include 
+                                ./include/core
+                                ./include/core/hash
                                 ./include/components 
                                 ./include/systems 
                                 ./include/systems/screens
-                                ./include/ui)
+                                ./include/ui
+                                ./include/ui/elements
+                                ./include/ui/shared
+                                ./include/ui/layout)
 
-target_link_libraries(hello_world PUBLIC raylib sxml)
 if(MSVC)
   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 else()
@@ -97,7 +124,7 @@ else()
 endif()
 
 add_custom_command(
-        TARGET hello_world POST_BUILD
+        TARGET game POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/resources
         ${CMAKE_CURRENT_BINARY_DIR}/resources)

@@ -1,11 +1,22 @@
 #include <stdio.h>
-#include "../raylib/raylib.h"
+#include "raylib.h"
 #define CLAY_IMPLEMENTATION
 #include "clay.h"
 #include "../raylib/clay_renderer_raylib.c"
+#include "arena.h"
 #include "assert.h"
+#include "array.h"
+#include "int_coord_hash.h"
+#include "tilemap.h"
+#include "atlas.h"
+#include "atlas_table.h"
+// #include "ui/elements/button.h"
 
+#include "systems/kcomb_image.h"
+#include "camera.h"
 
+#define TILE_SIZE 16
+#define MAP_SIZE 128
 
 const Clay_Color COLOR_LIGHT = (Clay_Color){224, 215, 210, 255};
 const Clay_Color COLOR_RED = (Clay_Color){168, 66, 28, 255};
@@ -16,8 +27,14 @@ const Clay_Color COLOR_DARK = (Clay_Color){100, 100, 100, 255};
 const float ScreenWidth = 1600.0f;
 const float ScreenHeight = 900.0f;
 
+typedef struct {
+    int x, y;
+} Player;
+
+bool isDebug = false;
+
 void clay_assertion_callback(Clay_ErrorData errorText) {
-    assert(errorText.userData); // Or handle errorText as needed
+    // assert(errorText.userData); // Or handle errorText as needed
 }
 
 // Example measure text function
@@ -30,34 +47,15 @@ void clay_assertion_callback(Clay_ErrorData errorText) {
 //     };
 // }
 
-Clay_ElementDeclaration sidebarItemConfig = (Clay_ElementDeclaration) {
-    .layout = {
-        .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(50) }
-    },
-    .backgroundColor = COLOR_ORANGE
-};
-
-void SidebarItemComponent() {
-    CLAY(sidebarItemConfig) {
-        // children go here...
-    }
-}
-
-
-
-
-
 int main(void) {
-
-    // Core initialization
-
-
-    //Raylib initialization
-    Clay_Raylib_Initialize((int)ScreenWidth, (int)ScreenHeight, "Clay with Raylib Example", FLAG_BORDERLESS_WINDOWED_MODE | FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
-    SetExitKey(KEY_NULL);
+    /*
+    =======================Library Initialization======================
+    */
     
-    bool isMenuOpen = false;
-    KeyboardKey key;
+    // Initialize Raylib window
+    Clay_Raylib_Initialize((int)ScreenWidth, (int)ScreenHeight, "Clay with Raylib Example", FLAG_BORDERLESS_WINDOWED_MODE | FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
+    // SetExitKey(KEY_NULL);
+
     //Clay initialization
     uint64_t clayMemorySize = Clay_MinMemorySize();
     Clay_Arena memoryArena = {
@@ -74,101 +72,161 @@ int main(void) {
     };
     Clay_Initialize(memoryArena, dimentions, errorHandler);
 
+    // Texture2D tileset = LoadTexture("resources/spritesheet-export.png");
+
+    /*
+    =======================Texture Loading======================
+    */
+
+    AtlasTable atlasTable = AtlasTable_new();
+    AtlasTable_add(&atlasTable, "ground", Atlas_new(400));
+    Atlas* atlas = AtlasTable_get(&atlasTable, "ground");
+    Atlas_setTexture(atlas, "resources/spritesheet-export.png");
+    for(int i = 0; i < 9; i++) {
+        for(int j = 0; j < 1; j++) {
+            Rectangle rect = {i * 16, j * 16, 16, 16};
+            Atlas_addRect(atlas, i + j * 18, rect);
+        }
+    }
+
+    /*
+    ======================Tilemap Initialization======================
+    */
+
+    TraceLog(LOG_INFO, "Initializing arena and tilemap");
+    Arena_T arena = Arena_new();
+    Tilemap* tilemap = Tilemap_new(MAP_SIZE, MAP_SIZE, arena);
+
+    for (int y = 0; y < MAP_SIZE; y++) {
+        for (int x = 0; x < MAP_SIZE; x++) {
+            int rand = GetRandomValue(0, 4);
+            Tilemap_set_tile(tilemap, x, y, rand);
+        }
+    }
+    RenderTexture2D tilemapRenderTarget = LoadRenderTexture(MAP_SIZE * TILE_SIZE, MAP_SIZE * TILE_SIZE);
+    SetTextureFilter(tilemapRenderTarget.texture, TEXTURE_FILTER_POINT);
+    Texture2D tilemapTexture = tilemapRenderTarget.texture;
+
+    for (int y = 0; y < MAP_SIZE; y++) {
+        for (int x = 0; x < MAP_SIZE; x++) {
+            Tile* tile = Tilemap_get_tile(tilemap, x, y);
+            if (tile) {
+                Rectangle sourceRect = Atlas_getRect(atlas, tile->tile_id);
+                Rectangle destRect = { x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE };
+                BeginTextureMode(tilemapRenderTarget);
+                DrawTextureRec(atlas->texture, sourceRect, (Vector2){ destRect.x, destRect.y }, WHITE);
+                EndTextureMode();
+            }
+        }
+    }
+    KeyboardKey key;
+
     SetTargetFPS(60);
 
+    // Camera setup
+    Camera2DEx cam;
+    // Camera_Init(&cam, (Vector2){ MAP_SIZE * TILE_SIZE, MAP_SIZE * TILE_SIZE });
+    Camera_Init(&cam, (Vector2){ ScreenWidth, ScreenHeight });
+    int frame = 0;
     //Main game loop
-        while (!WindowShouldClose())    // Detect window close button or ESC key
-        {
-        //Window events
-        if (IsWindowResized()) {
-            Clay_SetLayoutDimensions((Clay_Dimensions) { .width = (float)GetScreenWidth(), .height = (float)GetScreenHeight() });
-        }
-        // Clay_SetLayoutDimensions((Clay_Dimensions) { .width = (float)GetScreenWidth(), .height = ScreenHeight });
+    while (!WindowShouldClose())    // Detect window close button
+    {
+        frame++;
+        BeginDrawing();
+        ClearBackground(YELLOW);
+        Clay_BeginLayout();
 
-        // Context switch between menu and game
-        if (isMenuOpen) {
-            // Menu is open, handle menu-specific logic
+        // Update camera inputs
+        Camera_UpdateInputs(&cam, GetFrameTime());
 
-            // Input
-            key = GetKeyPressed();
-            switch (key)
-            {
-            case KEY_M:
-                isMenuOpen = false;
-                break;
-            
-            default:
-                break;
+        if(IsKeyPressed(KEY_F11)) {
+            if (isDebug) {
+                TraceLog(LOG_INFO, "Disabling debug mode");
+                isDebug = false;
+            } else {
+                TraceLog(LOG_INFO, "Enabling debug mode");
+                isDebug = true;
             }
-
-            // Update
-
-            // Render
-
-            Clay_BeginLayout();
-            CLAY({ .id = CLAY_ID("OuterContainer"), .layout = { .sizing = {CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0)}, .padding = CLAY_PADDING_ALL(16), .childGap = 16 }, .backgroundColor = {250,250,255,255} }) {
-            CLAY({ .id = CLAY_ID("Header"), .layout = { .sizing = {CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(50)} }, .backgroundColor = COLOR_DARK }) {
-                //    CLAY({ .id = CLAY_ID("HeaderText"), .layout = { .sizing = {CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0)} }, .text = "Hello, World!", .textConfig = { .fontSize = 32, .color = COLOR_WHITE, .horizontalAlign = CLAY_TEXT_ALIGN_CENTER, .verticalAlign = CLAY_TEXT_ALIGN_CENTER } }) {}
-            }
-            }
-            Clay_RenderCommandArray renderCommands = Clay_EndLayout();
-
-            BeginDrawing();
-                ClearBackground(YELLOW);
-                Clay_Raylib_Render(renderCommands, FONT_DEFAULT);
-            EndDrawing();
-        } else {
-            // Game is active, handle game-specific logic
-
-            // Input
-            key = GetKeyPressed();
-            switch (key)
-            {
-            case KEY_M:
-                isMenuOpen = !isMenuOpen;
-                break;
-            default:
-                break;
-            }
-
-            // Update
-
-            // Render
-            BeginDrawing();
-                ClearBackground(RAYWHITE);
-                DrawText("Press M to open the menu", 10, 10, 20, DARKGRAY);
-            EndDrawing();
         }
 
-        // //Input
-        // key = GetKeyPressed();
-        // if(key == KEY_M && isMenuOpen) {
-        //     isMenuOpen = false;
-        // }
-        // else if(key == KEY_M && !isMenuOpen) {
-        //     isMenuOpen = true;
-        // }
+        if (frame % 60 == 0 && isDebug) {
+            TraceLog(LOG_INFO, "Camera Position: (%.2f, %.2f), Zoom: %.2f", cam.pos.x, cam.pos.y, cam.zoom);
+            int mouseX = GetMouseX();
+            int mouseY = GetMouseY();
+            TraceLog(LOG_INFO, "Mouse Position: (%d, %d)", mouseX, mouseY);
 
-        // //Update
+                // Compute aspect fit and camera viewport sizes
+                AspectFit fitDbg = Camera_ComputeAspectFit(cam.logicalSize, GetRenderWidth(), GetRenderHeight());
+                float viewW = cam.logicalSize.x / cam.zoom;
+                float viewH = cam.logicalSize.y / cam.zoom;
 
-        //Render
+                // Convert mouse (screen) -> world (tilemap texture) coordinates
+                float relX = (float)mouseX - fitDbg.dest.x;
+                float relY = (float)mouseY - fitDbg.dest.y;
+                float worldX = cam.pos.x + (relX * (viewW / fitDbg.dest.width));
+                // IMPORTANT: Our rendering uses a negative src height to flip vertically,
+                // so the screen Y maps to world Y without inversion here to keep top=0, bottom=MAP_SIZE-1
+                float worldY = cam.pos.y + (relY * (viewH / fitDbg.dest.height));
+
+            // Tile coordinates (indices)
+            int tileX = (int)(worldX / TILE_SIZE);
+            int tileY = (int)(worldY / TILE_SIZE);
+            if (tileX < 0) tileX = 0; else if (tileX >= MAP_SIZE) tileX = MAP_SIZE - 1;
+            if (tileY < 0) tileY = 0; else if (tileY >= MAP_SIZE) tileY = MAP_SIZE - 1;
+
+            Tile* hovered = Tilemap_get_tile(tilemap, tileX, tileY);
+            int tileId = hovered ? hovered->tile_id : -1;
+            TraceLog(LOG_INFO, "World Pos: (%.2f, %.2f) -> Tile: (%d, %d), ID: %d", worldX, worldY, tileX, tileY, tileId);
+
+                        // Compute screen-space rectangle for the hovered tile and draw an outline
+            // World-space tile rect
+            float tileWorldX = (float)tileX * TILE_SIZE;
+            float tileWorldY = (float)tileY * TILE_SIZE;
+
+            // Aspect-fit and viewport under zoom (reuse fitDbg/viewW/viewH above)
+            float viewW_dbg = viewW;
+            float viewH_dbg = viewH;
+
+            // World -> screen mapping (matching DrawTexturePro(tilemapTexture, srcZoom, fit.dest, ...))
+            float sx = fitDbg.dest.x + (tileWorldX - cam.pos.x) * (fitDbg.dest.width / viewW_dbg);
+            float sy = fitDbg.dest.y + (tileWorldY - cam.pos.y) * (fitDbg.dest.height / viewH_dbg);
+            float sw = (float)TILE_SIZE * (fitDbg.dest.width / viewW_dbg);
+            float sh = (float)TILE_SIZE * (fitDbg.dest.height / viewH_dbg);
+
+            DrawRectangleLinesEx((Rectangle){ sx, sy, sw, sh }, 2.0f, (Color){255, 255, 0, 255});
+        }
+
+        // Recompute aspect fit on resize
+        AspectFit fit = Camera_ComputeAspectFit(cam.logicalSize, GetRenderWidth(), GetRenderHeight());
+        Camera_ClampToBounds(&cam, (Vector2){ MAP_SIZE * TILE_SIZE, MAP_SIZE * TILE_SIZE }, fit);
+        
+
+        // Draw the render texture to the screen (Y-flipped source)
+        Rectangle src = { 0, 0, (float)tilemapTexture.width, (float)-tilemapTexture.height };
+        // Apply zoom by scaling destination size around camera viewport
+        // Compute logical viewport under zoom
+        float viewW = cam.logicalSize.x / cam.zoom;
+        float viewH = cam.logicalSize.y / cam.zoom;
+        // Source rectangle in texture corresponding to camera position and viewport
+        Rectangle srcZoom = {
+            cam.pos.x, cam.pos.y,
+            viewW, -viewH
+        };
+        // Destination keeps aspect-fit letterboxing
+        DrawTexturePro(tilemapTexture, srcZoom, fit.dest, (Vector2){0,0}, 0.0f, WHITE);
 
         
 
-        // BeginDrawing();
-        // ClearBackground(YELLOW);
-        // if(isMenuOpen) {
-        //     Clay_Raylib_Render(renderCommands, FONT_DEFAULT);
-        // }
-        // else {
-        //     DrawText("Press M to open the menu", 10, 10, 20, DARKGRAY);
-        //     if(IsKeyPressed(KEY_M)) {
-        //         isMenuOpen = true;
-        //     }
-        // }
 
-        // EndDrawing();
+        Clay_RenderCommandArray renderCommands = Clay_EndLayout();
+        Clay_Raylib_Render(renderCommands, NULL);
+        EndDrawing();
     }
+
+
+    // De-init
+
+    Atlas_free(atlas);
 
     return 0;
 }
