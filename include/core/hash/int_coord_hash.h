@@ -9,6 +9,6 @@ typedef struct {
 } IntCoord;
 
 unsigned int IntCoord_hash(const void *key);
-bool IntCoord_cmp(const void *x, const void *y);
+int IntCoord_cmp(const void *x, const void *y);
 
 #endif //INT_COORD_HASH

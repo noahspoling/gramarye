@@ -8,7 +8,7 @@ unsigned int IntCoord_hash(const void *key) {
     return hash;
 }
 
-bool IntCoord_cmp(const void *x, const void *y) {
+int IntCoord_cmp(const void *x, const void *y) {
     const IntCoord *a = (const IntCoord *)x;
     const IntCoord *b = (const IntCoord *)y;
     if (a->x != b->x) {

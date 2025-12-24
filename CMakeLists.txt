@@ -29,6 +29,9 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(raylib)
 
+# Threads (pthreads on Linux/macOS)
+find_package(Threads REQUIRED)
+
 FetchContent_Declare(
     sxml
     GIT_REPOSITORY "https://github.com/capmar/sxml.git"
@@ -57,11 +60,29 @@ file(GLOB UI_ELEMENT_FILES "src/ui/elements/*.c")
 file(GLOB UI_SHARED_FILES "src/ui/shared/*.c")
 file(GLOB UI_LAYOUT_FILES "src/ui/layout/*.c")
 
-#Adding files to core executable to share in multi executable setup
+# Filter platform specific files
+if(WIN32)
+    file(GLOB CORE_PLATFORM_FILES "src/core/platform/win/*.c")
+else()
+    file(GLOB CORE_PLATFORM_FILES "src/core/platform/unix/*.c")
+endif()
+
+# Don't compile platform-specific implementations from the root `src/core/` glob.
+# We compile exactly one platform backend from `src/core/platform/*` instead.
+list(FILTER CORE_FILES EXCLUDE REGEX ".*/thread-nt\\.c$")
+list(FILTER CORE_FILES EXCLUDE REGEX ".*/thread\\.c$")
+
+# CII ships some libc replacement/compat files that clash with or depend on
+# legacy glibc internals (e.g. sys_errlist/sys_nerr). Prefer the platform libc.
+list(FILTER CORE_FILES EXCLUDE REGEX ".*/strerror\\.c$")
+list(FILTER CORE_FILES EXCLUDE REGEX ".*/strncmp\\.c$")
+list(FILTER CORE_FILES EXCLUDE REGEX ".*/memcmp\\.c$")
+list(FILTER CORE_FILES EXCLUDE REGEX ".*/memmove\\.c$")
 
 # TODO Reorganize this for segmenting by target executable
 message(STATUS "SRC_FILES: ${SRC_FILES} 
                 CORE_FILES: ${CORE_FILES}
+                CORE_PLATFORM_FILES: ${CORE_PLATFORM_FILES}
                 HASH_FILES: ${HASH_FILES}
                 COMPONENT_FILES: ${COMPONENT_FILES} 
                 SYSTEM_FILES: ${SYSTEM_FILES} 
@@ -73,6 +94,7 @@ message(STATUS "SRC_FILES: ${SRC_FILES}
 )
 add_executable(game ${SRC_FILES} 
                            ${CORE_FILES}
+                           ${CORE_PLATFORM_FILES}
                            ${HASH_FILES}
                            ${COMPONENT_FILES} 
                            ${SYSTEM_FILES} 
@@ -103,10 +125,11 @@ endif()
 
 # Game Include
 target_compile_options(game PUBLIC)
-target_link_libraries(game PUBLIC raylib sxml)
+target_link_libraries(game PUBLIC raylib sxml Threads::Threads)
 target_include_directories(game PUBLIC 
                                 ./include 
                                 ./include/core
+                                ./include/core/platform
                                 ./include/core/hash
                                 ./include/components 
                                 ./include/systems 

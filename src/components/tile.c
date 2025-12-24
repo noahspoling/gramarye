@@ -1,4 +1,5 @@
 #include "tile.h"
+#include <stdlib.h>
 
 Tile* Tile_new(uint16_t tile_id, uint8_t flags) {
     Tile* tile = (Tile*)malloc(sizeof(Tile));

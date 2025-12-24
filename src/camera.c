@@ -15,8 +15,8 @@ void Camera_Init(Camera2DEx *cam, Vector2 logicalSize) {
 
 void Camera_UpdateInputs(Camera2DEx *cam, float dt) {
     Vector2 dir = {0};
-    if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP)) dir.y += 1.0f;
-    if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN)) dir.y -= 1.0f;
+    if (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP)) dir.y -= 1.0f;
+    if (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN)) dir.y += 1.0f;
     if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT)) dir.x -= 1.0f;
     if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) dir.x += 1.0f;
     if (dir.x != 0 || dir.y != 0) {
