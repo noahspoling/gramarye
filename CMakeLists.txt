@@ -49,14 +49,14 @@ endif()
 
 # Fetch xmos-libcore library
 FetchContent_Declare(
-    xmos_libcore
-    GIT_REPOSITORY "https://github.com/noahspoling/xmos-libcore.git"
+    gramarye_libcore
+    GIT_REPOSITORY "https://github.com/noahspoling/gramarye-libcore.git"
     GIT_TAG "main"
     GIT_PROGRESS TRUE
     GIT_SHALLOW TRUE
 )
 
-FetchContent_MakeAvailable(xmos_libcore)
+FetchContent_MakeAvailable(gramarye_libcore)
 
 file(GLOB SRC_FILES "src/*.c")
 # Note: CORE_FILES, HASH_FILES, and CORE_PLATFORM_FILES are now provided by xmos-libcore
@@ -114,11 +114,11 @@ target_link_libraries(game PUBLIC
     raylib 
     sxml 
     Threads::Threads
-    xmos-libcore  # Link against xmos-libcore library
+    gramarye-libcore  # Link against gramarye-libcore library
 )
 target_include_directories(game PUBLIC 
                                 ./include 
-                                # Core includes come from xmos-libcore library
+                                # Core includes come from gramarye-libcore library
                                 ./include/components 
                                 ./include/systems 
                                 ./include/systems/screens
