@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.27)
 project(rayui C)
 set(CMAKE_C_STANDARD 99)
 
+# Generate compile_commands.json for IntelliSense
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # WebAssembly toggle (must be before fetching raylib)
 option(BUILD_WEB "Build with Emscripten (WebAssembly)" OFF)
 
