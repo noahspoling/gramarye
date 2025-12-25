@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include "arena.h"
 #include "table.h"
-#include "core/hash/uuid_hash.h"
+#include "uuid_hash.h"
 
 // Entity ID is a UUID
 typedef uuid_key_t EntityId;

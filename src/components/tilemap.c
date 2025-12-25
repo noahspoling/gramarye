@@ -1,4 +1,5 @@
 #include "tilemap.h"
+#include "raylib.h"
 
 Tilemap *Tilemap_new(int width, int height, Arena_T arena) {
     Tilemap *map = (Tilemap*)Arena_alloc(arena, sizeof(Tilemap), __FILE__, __LINE__);
@@ -10,6 +11,7 @@ Tilemap *Tilemap_new(int width, int height, Arena_T arena) {
 }
 
 void Tilemap_set_tile(Tilemap *map, int x, int y, uint16_t tile_id) {
+    TraceLog(LOG_DEBUG, "Tilemap_set_tile: Setting tile at: %d, %d to: %d", x, y, tile_id);
     IntCoord *coord = (IntCoord*)Arena_alloc(map->arena, sizeof(IntCoord), __FILE__, __LINE__);
     coord->x = x;
     coord->y = y;

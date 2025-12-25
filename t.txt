@@ -1,0 +1,4 @@
+If tiles are still being placed at (0,0), check:
+The mouse coordinates being passed to TilemapRenderSystem_handle_click
+The Camera_ScreenToWorld conversion
+The tile coordinate calculation (division by tileSize)

@@ -6,17 +6,11 @@
 #include "table.h"
 #include "int_coord_hash.h"
 
-typedef struct ChunkData {
-    Arena_T entityArena;
-    Arena_T itemArena;
-    Arena_T tileArena;
-} ChunkData;
-
 typedef struct Chunk {
-    int x;
-    int y;
-    ChunkData *data;
-    Table_T tileLookup; // Table_T with IntCoord* as key, Tile* as value
+    int chunkX, chunkY;
+    Table_T tileLookup;
+    Arena_T tileArena;
+    bool isLoaded;
 } Chunk;
 
 /// @brief  Creates a new chunk at the specified coordinates

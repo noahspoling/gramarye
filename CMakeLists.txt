@@ -47,9 +47,19 @@ if(NOT sxml_POPULATED)
     target_include_directories(sxml PUBLIC ${sxml_SOURCE_DIR})
 endif()
 
+# Fetch xmos-libcore library
+FetchContent_Declare(
+    xmos_libcore
+    GIT_REPOSITORY "https://github.com/noahspoling/xmos-libcore.git"
+    GIT_TAG "main"
+    GIT_PROGRESS TRUE
+    GIT_SHALLOW TRUE
+)
+
+FetchContent_MakeAvailable(xmos_libcore)
+
 file(GLOB SRC_FILES "src/*.c")
-file(GLOB CORE_FILES "src/core/*.c")
-file(GLOB HASH_FILES "src/core/hash/*.c")
+# Note: CORE_FILES, HASH_FILES, and CORE_PLATFORM_FILES are now provided by xmos-libcore
 file(GLOB COMPONENT_FILES "src/components/*.c")
 file(GLOB SYSTEM_FILES "src/systems/*.c")
 file(GLOB SCREEN_FILES "src/systems/screens/*.c")
@@ -60,30 +70,8 @@ file(GLOB UI_ELEMENT_FILES "src/ui/elements/*.c")
 file(GLOB UI_SHARED_FILES "src/ui/shared/*.c")
 file(GLOB UI_LAYOUT_FILES "src/ui/layout/*.c")
 
-# Filter platform specific files
-if(WIN32)
-    file(GLOB CORE_PLATFORM_FILES "src/core/platform/win/*.c")
-else()
-    file(GLOB CORE_PLATFORM_FILES "src/core/platform/unix/*.c")
-endif()
-
-# Don't compile platform-specific implementations from the root `src/core/` glob.
-# We compile exactly one platform backend from `src/core/platform/*` instead.
-list(FILTER CORE_FILES EXCLUDE REGEX ".*/thread-nt\\.c$")
-list(FILTER CORE_FILES EXCLUDE REGEX ".*/thread\\.c$")
-
-# CII ships some libc replacement/compat files that clash with or depend on
-# legacy glibc internals (e.g. sys_errlist/sys_nerr). Prefer the platform libc.
-list(FILTER CORE_FILES EXCLUDE REGEX ".*/strerror\\.c$")
-list(FILTER CORE_FILES EXCLUDE REGEX ".*/strncmp\\.c$")
-list(FILTER CORE_FILES EXCLUDE REGEX ".*/memcmp\\.c$")
-list(FILTER CORE_FILES EXCLUDE REGEX ".*/memmove\\.c$")
-
 # TODO Reorganize this for segmenting by target executable
 message(STATUS "SRC_FILES: ${SRC_FILES} 
-                CORE_FILES: ${CORE_FILES}
-                CORE_PLATFORM_FILES: ${CORE_PLATFORM_FILES}
-                HASH_FILES: ${HASH_FILES}
                 COMPONENT_FILES: ${COMPONENT_FILES} 
                 SYSTEM_FILES: ${SYSTEM_FILES} 
                 SCREEN_FILES: ${SCREEN_FILES}
@@ -92,10 +80,7 @@ message(STATUS "SRC_FILES: ${SRC_FILES}
                 UI_SHARED_FILES: ${UI_SHARED_FILES}
                 UI_LAYOUT_FILES: ${UI_LAYOUT_FILES}"
 )
-add_executable(game ${SRC_FILES} 
-                           ${CORE_FILES}
-                           ${CORE_PLATFORM_FILES}
-                           ${HASH_FILES}
+add_executable(game        ${SRC_FILES} 
                            ${COMPONENT_FILES} 
                            ${SYSTEM_FILES} 
                            ${SCREEN_FILES}
@@ -125,12 +110,15 @@ endif()
 
 # Game Include
 target_compile_options(game PUBLIC)
-target_link_libraries(game PUBLIC raylib sxml Threads::Threads)
+target_link_libraries(game PUBLIC 
+    raylib 
+    sxml 
+    Threads::Threads
+    xmos-libcore  # Link against xmos-libcore library
+)
 target_include_directories(game PUBLIC 
                                 ./include 
-                                ./include/core
-                                ./include/core/platform
-                                ./include/core/hash
+                                # Core includes come from xmos-libcore library
                                 ./include/components 
                                 ./include/systems 
                                 ./include/systems/screens

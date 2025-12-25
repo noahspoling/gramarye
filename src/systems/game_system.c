@@ -142,11 +142,12 @@ void GameSystem_frame(GameSystem* g, float dt) {
 
     // 4) Apply placement with up-to-date camera + fit
     for (int i = 0; i < deferredCount; i++) {
+        TraceLog(LOG_DEBUG, "GameSystem_frame: Placing tile at mouse: %f, %f", deferredPlace[i].as.place.mousePos.x, deferredPlace[i].as.place.mousePos.y);
         TileEditSystem_place_tile_at_mouse(&g->state, fit, deferredPlace[i].as.place.mousePos);
     }
 
     // 5) Render & UI
-    ClearBackground(YELLOW);
+    ClearBackground(RED);
     UISystem_begin();
     RenderSystem_render(&g->state, fit);
     UISystem_draw_hud(&g->state);

@@ -67,6 +67,7 @@ int main(void) {
     GameSystem* game = GameSystem_create(arena, MAP_SIZE, TILE_SIZE, (Vector2){ ScreenWidth, ScreenHeight });
 
     while (!WindowShouldClose()) {
+        SetTraceLogLevel(LOG_DEBUG);
         float dt = GetFrameTime();
         BeginDrawing();
         GameSystem_frame(game, dt);

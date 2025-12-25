@@ -3,17 +3,18 @@
 #include "raylib.h"
 
 void TileEditSystem_place_tile_at_mouse(GameState* state, AspectFit fit, Vector2 mousePos) {
+    TraceLog(LOG_DEBUG, "TileEditSystem_place_tile_at_mouse: Applying place tile at mouse: %f, %f", mousePos.x, mousePos.y);
     if (!state) return;
 
     int tileX = 0, tileY = 0;
-    TraceLog(LOG_INFO, "Applying place tile at mouse: %f, %f", mousePos.x, mousePos.y);
 
     if (!TilemapRenderSystem_handle_click(&state->tilemapRenderer, mousePos, &state->cam, fit, state->tileSize, &tileX, &tileY)) {
+        TraceLog(LOG_DEBUG, "TileEditSystem_place_tile_at_mouse: Failed to get tile at mouse: %f, %f", mousePos.x, mousePos.y);
         return;
     }
     if (tileX < 0 || tileX >= state->mapSize || tileY < 0 || tileY >= state->mapSize) return;
 
-    TraceLog(LOG_INFO, "Placing tile at: %d, %d", tileX, tileY);
+    TraceLog(LOG_DEBUG, "TileEditSystem_place_tile_at_mouse: Placing tile at: %d, %d", tileX, tileY);
     state->hasLastClick = true;
     state->lastClickTileX = tileX;
     state->lastClickTileY = tileY;
