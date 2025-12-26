@@ -3,8 +3,8 @@
 #include "raylib.h"
 
 static void render_player(GameState* state, AspectFit fit) {
-    Position* p = Position_get(state->positionRegistry, state->player);
-    Sprite* s = Sprite_get(state->spriteRegistry, state->player);
+    Position* p = Position_get(state->ecs, state->player, state->positionTypeId);
+    Sprite* s = Sprite_get(state->ecs, state->player, state->spriteTypeId);
     if (!p || !s) return;
 
     float worldToScreenScale = fit.scale * state->cam.zoom;

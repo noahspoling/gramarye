@@ -1,36 +1,24 @@
 #include "sprite.h"
-#include "mem.h"
 
-SpriteRegistry* SpriteRegistry_new(Arena_T arena) {
-    SpriteRegistry* registry = (SpriteRegistry*)Arena_alloc(arena, sizeof(SpriteRegistry), __FILE__, __LINE__);
-    registry->arena = arena;
-    registry->sprites = Table_new(1024, EntityId_cmp, EntityId_hash);
-    return registry;
+void Sprite_add(ECS* ecs, EntityId entity, ComponentTypeId typeId, Atlas* atlas, int tile_id) {
+    Sprite sprite;
+    sprite.atlas = atlas;
+    sprite.tile_id = tile_id;
+    ECS_add_component(ecs, entity, typeId, &sprite);
 }
 
-void Sprite_add(SpriteRegistry* registry, EntityId entity, Atlas* atlas, int tile_id) {
-    Sprite* sprite = (Sprite*)Arena_alloc(registry->arena, sizeof(Sprite), __FILE__, __LINE__);
-    sprite->atlas = atlas;
-    sprite->tile_id = tile_id;
-    
-    EntityId* idKey = (EntityId*)Arena_alloc(registry->arena, sizeof(EntityId), __FILE__, __LINE__);
-    *idKey = entity;
-    
-    Table_put(registry->sprites, idKey, sprite);
+Sprite* Sprite_get(ECS* ecs, EntityId entity, ComponentTypeId typeId) {
+    return (Sprite*)ECS_get_component(ecs, entity, typeId);
 }
 
-Sprite* Sprite_get(SpriteRegistry* registry, EntityId entity) {
-    return (Sprite*)Table_get(registry->sprites, &entity);
-}
-
-void Sprite_set_tile(SpriteRegistry* registry, EntityId entity, int tile_id) {
-    Sprite* sprite = Sprite_get(registry, entity);
+void Sprite_set_tile(ECS* ecs, EntityId entity, ComponentTypeId typeId, int tile_id) {
+    Sprite* sprite = Sprite_get(ecs, entity, typeId);
     if (sprite) {
         sprite->tile_id = tile_id;
     }
 }
 
-void Sprite_remove(SpriteRegistry* registry, EntityId entity) {
-    Table_remove(registry->sprites, &entity);
+void Sprite_remove(ECS* ecs, EntityId entity, ComponentTypeId typeId) {
+    ECS_remove_component(ecs, entity, typeId);
 }
 

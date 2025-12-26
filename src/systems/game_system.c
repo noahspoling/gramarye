@@ -11,6 +11,9 @@
 #include "systems/tile_edit_system.h"
 #include "systems/render_system.h"
 #include "systems/ui_system.h"
+#include "components/position.h"
+#include "components/health.h"
+#include "components/sprite.h"
 
 struct GameSystem {
     GameState state;
@@ -49,25 +52,29 @@ static void init_tilemap(GameState* s) {
 }
 
 static void init_entities(GameState* s) {
-    s->entityRegistry = EntityRegistry_new(s->arena);
-    s->positionRegistry = PositionRegistry_new(s->arena);
-    s->healthRegistry = HealthRegistry_new(s->arena);
-    s->spriteRegistry = SpriteRegistry_new(s->arena);
+    s->ecs = ECS_new(s->arena);
+    
+    // Register component types
+    s->positionTypeId = ECS_register_component_type(s->ecs, "Position", sizeof(Position));
+    s->healthTypeId = ECS_register_component_type(s->ecs, "Health", sizeof(BarValue));
+    s->spriteTypeId = ECS_register_component_type(s->ecs, "Sprite", sizeof(Sprite));
 
-    s->player = Entity_create(s->entityRegistry);
-    Entity_add_component_type(s->entityRegistry, s->player, COMPONENT_POSITION | COMPONENT_HEALTH | COMPONENT_SPRITE);
+    // Create player entity
+    EntityRegistry* entityRegistry = ECS_get_entity_registry(s->ecs);
+    s->player = Entity_create(entityRegistry);
 
+    // Add components to player
     int startX = s->mapSize / 2;
     int startY = s->mapSize / 2;
-    Position_add(s->positionRegistry, s->player, startX, startY);
-    Health_add(s->healthRegistry, s->player, 100.0f);
-    Sprite_add(s->spriteRegistry, s->player, s->atlas, 4);
+    Position_add(s->ecs, s->player, s->positionTypeId, startX, startY);
+    Health_add(s->ecs, s->player, s->healthTypeId, 100.0f);
+    Sprite_add(s->ecs, s->player, s->spriteTypeId, s->atlas, 4);
 }
 
 static void init_camera(GameState* s, Vector2 logicalSize) {
     Camera_Init(&s->cam, logicalSize);
 
-    Position* p = Position_get(s->positionRegistry, s->player);
+    Position* p = Position_get(s->ecs, s->player, s->positionTypeId);
     float viewW = s->cam.logicalSize.x / s->cam.zoom;
     float viewH = s->cam.logicalSize.y / s->cam.zoom;
     float px = p->x * s->tileSize + s->tileSize * 0.5f;

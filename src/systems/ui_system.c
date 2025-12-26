@@ -10,7 +10,7 @@ void UISystem_begin(void) {
 
 void UISystem_draw_hud(GameState* state) {
     if (!state) return;
-    Position* p = Position_get(state->positionRegistry, state->player);
+    Position* p = Position_get(state->ecs, state->player, state->positionTypeId);
     if (!p) return;
     DrawText(TextFormat("Player: (%d, %d)  Zoom: %.2f", p->x, p->y, state->cam.zoom), 10, 10, 20, BLACK);
 }

@@ -5,7 +5,9 @@
 #include "tilemap.h"
 #include "atlas.h"
 #include "camera.h"
-#include "entity.h"
+#include "gramarye_ecs/ecs.h"
+#include "gramarye_ecs/entity.h"
+#include "gramarye_ecs/component.h"
 #include "components/position.h"
 #include "components/sprite.h"
 
@@ -25,8 +27,9 @@ void TilemapRenderSystem_render(TilemapRenderSystem* system, Tilemap* tilemap, C
 
 // Render entities (sprites) on top of tilemap
 void TilemapRenderSystem_render_entities(TilemapRenderSystem* system, 
-                                         SpriteRegistry* spriteReg, 
-                                         PositionRegistry* posReg,
+                                         ECS* ecs,
+                                         ComponentTypeId spriteTypeId,
+                                         ComponentTypeId positionTypeId,
                                          Camera2DEx* cam, 
                                          AspectFit fit, 
                                          int tileSize);

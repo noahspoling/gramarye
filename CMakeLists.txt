@@ -61,6 +61,28 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(gramarye_libcore)
 
+# Fetch gramarye-ecs library
+FetchContent_Declare(
+    gramarye_ecs
+    GIT_REPOSITORY "https://github.com/noahspoling/gramarye-ecs.git"
+    GIT_TAG "main"
+    GIT_PROGRESS TRUE
+    GIT_SHALLOW TRUE
+)
+
+FetchContent_MakeAvailable(gramarye_ecs)
+
+# Fetch gramarye-query-engine library
+FetchContent_Declare(
+    gramarye_query_engine
+    GIT_REPOSITORY "https://github.com/noahspoling/gramarye-query-engine.git"
+    GIT_TAG "main"
+    GIT_PROGRESS TRUE
+    GIT_SHALLOW TRUE
+)
+
+FetchContent_MakeAvailable(gramarye_query_engine)
+
 file(GLOB SRC_FILES "src/*.c")
 # Note: CORE_FILES, HASH_FILES, and CORE_PLATFORM_FILES are now provided by xmos-libcore
 file(GLOB COMPONENT_FILES "src/components/*.c")
@@ -118,6 +140,8 @@ target_link_libraries(game PUBLIC
     sxml 
     Threads::Threads
     gramarye-libcore  # Link against gramarye-libcore library
+    gramarye-ecs
+    gramarye-query-engine
 )
 target_include_directories(game PUBLIC 
                                 ./include 

@@ -13,7 +13,7 @@ void CameraSystem_apply_zoom(GameState* state, float wheel) {
 
 void CameraSystem_follow_player(GameState* state) {
     if (!state) return;
-    Position* p = Position_get(state->positionRegistry, state->player);
+    Position* p = Position_get(state->ecs, state->player, state->positionTypeId);
     if (!p) return;
 
     float viewW = state->cam.logicalSize.x / state->cam.zoom;

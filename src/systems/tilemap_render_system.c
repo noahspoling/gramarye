@@ -47,12 +47,20 @@ void TilemapRenderSystem_render(TilemapRenderSystem* system, Tilemap* tilemap, C
 }
 
 void TilemapRenderSystem_render_entities(TilemapRenderSystem* system, 
-                                         SpriteRegistry* spriteReg, 
-                                         PositionRegistry* posReg,
+                                         ECS* ecs,
+                                         ComponentTypeId spriteTypeId,
+                                         ComponentTypeId positionTypeId,
                                          Camera2DEx* cam, 
                                          AspectFit fit, 
                                          int tileSize) {
     if (!system->initialized) return;
+    (void)ecs;
+    (void)spriteTypeId;
+    (void)positionTypeId;
+    (void)cam;
+    (void)fit;
+    (void)tileSize;
+    // TODO: Implement entity rendering using ECS queries
 }
 
 bool TilemapRenderSystem_handle_click(TilemapRenderSystem* system, 

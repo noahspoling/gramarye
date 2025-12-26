@@ -1,35 +1,26 @@
 #ifndef POSITION_H
 #define POSITION_H
 
-#include "entity.h"
-#include "arena.h"
-#include "table.h"
+#include "gramarye_ecs/ecs.h"
+#include "gramarye_ecs/entity.h"
+#include "gramarye_ecs/component.h"
 
 typedef struct {
     int x;
     int y;
 } Position;
 
-// Position component registry
-typedef struct PositionRegistry {
-    Arena_T arena;
-    Table_T positions;  // EntityId -> Position*
-} PositionRegistry;
-
-// Create a new position registry
-PositionRegistry* PositionRegistry_new(Arena_T arena);
-
 // Add position component to entity
-void Position_add(PositionRegistry* registry, EntityId entity, int x, int y);
+void Position_add(ECS* ecs, EntityId entity, ComponentTypeId typeId, int x, int y);
 
 // Get position component for entity
-Position* Position_get(PositionRegistry* registry, EntityId entity);
+Position* Position_get(ECS* ecs, EntityId entity, ComponentTypeId typeId);
 
 // Set position component for entity
-void Position_set(PositionRegistry* registry, EntityId entity, int x, int y);
+void Position_set(ECS* ecs, EntityId entity, ComponentTypeId typeId, int x, int y);
 
 // Remove position component from entity
-void Position_remove(PositionRegistry* registry, EntityId entity);
+void Position_remove(ECS* ecs, EntityId entity, ComponentTypeId typeId);
 
 #endif // POSITION_H
 

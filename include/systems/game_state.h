@@ -10,7 +10,9 @@
 #include "atlas.h"
 #include "tilemap.h"
 #include "camera.h"
-#include "entity.h"
+#include "gramarye_ecs/ecs.h"
+#include "gramarye_ecs/entity.h"
+#include "gramarye_ecs/component.h"
 
 #include "components/health.h"
 #include "components/position.h"
@@ -27,10 +29,10 @@ typedef struct GameState {
     Atlas* atlas;
     Tilemap* tilemap;
 
-    EntityRegistry* entityRegistry;
-    PositionRegistry* positionRegistry;
-    HealthRegistry* healthRegistry;
-    SpriteRegistry* spriteRegistry;
+    ECS* ecs;
+    ComponentTypeId positionTypeId;
+    ComponentTypeId healthTypeId;
+    ComponentTypeId spriteTypeId;
     EntityId player;
 
     Camera2DEx cam;

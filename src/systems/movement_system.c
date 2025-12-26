@@ -8,7 +8,7 @@ static bool is_tile_walkable(uint16_t tile_id) {
 
 void MovementSystem_apply_move(GameState* state, int dx, int dy) {
     if (!state) return;
-    Position* p = Position_get(state->positionRegistry, state->player);
+    Position* p = Position_get(state->ecs, state->player, state->positionTypeId);
     if (!p) return;
 
     int newX = p->x + dx;
@@ -17,7 +17,7 @@ void MovementSystem_apply_move(GameState* state, int dx, int dy) {
 
     Tile* targetTile = Tilemap_get_tile(state->tilemap, newX, newY);
     if (targetTile && is_tile_walkable(targetTile->tile_id)) {
-        Position_set(state->positionRegistry, state->player, newX, newY);
+        Position_set(state->ecs, state->player, state->positionTypeId, newX, newY);
     }
 }
 
