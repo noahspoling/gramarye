@@ -18,7 +18,7 @@
 #include "components/position.h"
 #include "components/sprite.h"
 
-#include "systems/tilemap_render_system.h"
+#include "systems/chunk_render_system.h"
 
 typedef struct GameState {
     Arena_T arena;
@@ -36,7 +36,7 @@ typedef struct GameState {
     EntityId player;
 
     Camera2DEx cam;
-    TilemapRenderSystem tilemapRenderer;
+    ChunkRenderSystem chunkRenderer;
 
     bool debug;
 

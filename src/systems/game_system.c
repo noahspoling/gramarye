@@ -11,6 +11,7 @@
 #include "systems/tile_edit_system.h"
 #include "systems/render_system.h"
 #include "systems/ui_system.h"
+#include "systems/chunk_render_system.h"
 #include "components/position.h"
 #include "components/health.h"
 #include "components/sprite.h"
@@ -95,7 +96,22 @@ GameSystem* GameSystem_create(Arena_T arena, int mapSize, int tileSize, Vector2 
     init_tilemap(&g->state);
     init_entities(&g->state);
 
-    TilemapRenderSystem_init(&g->state.tilemapRenderer, g->state.tilemap, g->state.atlas, g->state.tileSize);
+    // Initialize chunk render system
+    ChunkRenderSystem_init(&g->state.chunkRenderer,
+                          g->state.arena,
+                          g->state.tilemap,
+                          g->state.atlas,
+                          g->state.tileSize,
+                          64,  // chunk size: 64x64 tiles
+                          5,   // render radius: 5 chunks
+                          10); // simulation radius: 10 chunks
+    
+    // Add player as observer
+    ChunkRenderSystem_add_entity_observer(&g->state.chunkRenderer,
+                                         g->state.ecs,
+                                         g->state.player,
+                                         g->state.positionTypeId);
+    
     init_camera(&g->state, logicalSize);
 
     g->input = InputSystem_create(arena);
@@ -107,7 +123,7 @@ void GameSystem_destroy(GameSystem* g) {
     if (!g) return;
     InputSystem_destroy(g->input);
     g->input = NULL;
-    TilemapRenderSystem_cleanup(&g->state.tilemapRenderer);
+    ChunkRenderSystem_cleanup(&g->state.chunkRenderer);
     Atlas_free(g->state.atlas);
 }
 
@@ -142,18 +158,21 @@ void GameSystem_frame(GameSystem* g, float dt) {
         }
     }
 
-    // 3) Camera update/clamp
+    // 3) Update chunk system (load/unload chunks based on observers)
+    ChunkRenderSystem_update(&g->state.chunkRenderer, g->state.ecs, g->state.positionTypeId);
+    
+    // 4) Camera update/clamp
     CameraSystem_follow_player(&g->state);
     AspectFit fit = CameraSystem_compute_fit(&g->state);
     CameraSystem_clamp(&g->state, fit);
 
-    // 4) Apply placement with up-to-date camera + fit
+    // 5) Apply placement with up-to-date camera + fit
     for (int i = 0; i < deferredCount; i++) {
         TraceLog(LOG_DEBUG, "GameSystem_frame: Placing tile at mouse: %f, %f", deferredPlace[i].as.place.mousePos.x, deferredPlace[i].as.place.mousePos.y);
         TileEditSystem_place_tile_at_mouse(&g->state, fit, deferredPlace[i].as.place.mousePos);
     }
 
-    // 5) Render & UI
+    // 6) Render & UI
     ClearBackground(RED);
     UISystem_begin();
     RenderSystem_render(&g->state, fit);

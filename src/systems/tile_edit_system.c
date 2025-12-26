@@ -8,7 +8,7 @@ void TileEditSystem_place_tile_at_mouse(GameState* state, AspectFit fit, Vector2
 
     int tileX = 0, tileY = 0;
 
-    if (!TilemapRenderSystem_handle_click(&state->tilemapRenderer, mousePos, &state->cam, fit, state->tileSize, &tileX, &tileY)) {
+    if (!ChunkRenderSystem_handle_click(&state->chunkRenderer, mousePos, &state->cam, fit, &tileX, &tileY)) {
         TraceLog(LOG_DEBUG, "TileEditSystem_place_tile_at_mouse: Failed to get tile at mouse: %f, %f", mousePos.x, mousePos.y);
         return;
     }
@@ -20,7 +20,7 @@ void TileEditSystem_place_tile_at_mouse(GameState* state, AspectFit fit, Vector2
     state->lastClickTileY = tileY;
 
     Tilemap_set_tile(state->tilemap, tileX, tileY, 4);
-    TilemapRenderSystem_update_tile(&state->tilemapRenderer, state->tilemap, state->atlas, tileX, tileY, state->tileSize);
+    ChunkRenderSystem_mark_chunk_dirty(&state->chunkRenderer, tileX, tileY);
 }
 
 

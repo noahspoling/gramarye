@@ -30,7 +30,7 @@ static void render_debug_last_click(GameState* state, AspectFit fit) {
 
 void RenderSystem_render(GameState* state, AspectFit fit) {
     if (!state) return;
-    TilemapRenderSystem_render(&state->tilemapRenderer, state->tilemap, &state->cam, fit, state->tileSize);
+    ChunkRenderSystem_render(&state->chunkRenderer, state->ecs, state->positionTypeId, &state->cam, fit);
     render_debug_last_click(state, fit);
     render_player(state, fit);
 }
