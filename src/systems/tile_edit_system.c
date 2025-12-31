@@ -2,6 +2,9 @@
 
 #include "raylib.h"
 
+// Tilemap functions
+#include "tilemap/tilemap.h"  // Tilemap_set_tile
+
 void TileEditSystem_place_tile_at_mouse(GameState* state, AspectFit fit, Vector2 mousePos) {
     TraceLog(LOG_DEBUG, "TileEditSystem_place_tile_at_mouse: Applying place tile at mouse: %f, %f", mousePos.x, mousePos.y);
     if (!state) return;
@@ -12,7 +15,10 @@ void TileEditSystem_place_tile_at_mouse(GameState* state, AspectFit fit, Vector2
         TraceLog(LOG_DEBUG, "TileEditSystem_place_tile_at_mouse: Failed to get tile at mouse: %f, %f", mousePos.x, mousePos.y);
         return;
     }
-    if (tileX < 0 || tileX >= state->mapSize || tileY < 0 || tileY >= state->mapSize) return;
+    // Allow negative coordinates - the chunk system handles them correctly
+    // Only check upper bounds if mapSize is used as a limit
+    // (Remove this check entirely if you want infinite maps)
+    // if (tileX >= state->mapSize || tileY >= state->mapSize) return;
 
     TraceLog(LOG_DEBUG, "TileEditSystem_place_tile_at_mouse: Placing tile at: %d, %d", tileX, tileY);
     state->hasLastClick = true;

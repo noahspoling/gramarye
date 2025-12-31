@@ -12,9 +12,15 @@
 #include "systems/render_system.h"
 #include "systems/ui_system.h"
 #include "systems/chunk_render_system.h"
-#include "components/position.h"
-#include "components/health.h"
-#include "components/sprite.h"
+// ECS functions (from gramarye-component-functions, includes component structs)
+#include "core/position.h"  // Position_add, Position_get, etc.
+#include "core/health.h"  // Health_add, Health_get, etc.
+#include "textures/sprite.h"  // Sprite_add, Sprite_get, etc.
+
+// Atlas and Tilemap functions
+#include "textures/atlas.h"  // Full Atlas API (from gramarye-component-functions)
+#include "textures/atlas_table.h"  // From gramarye-components
+#include "tilemap/tilemap.h"  // From gramarye-components
 
 struct GameSystem {
     GameState state;

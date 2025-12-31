@@ -1,5 +1,7 @@
 #include "systems/chunk_render_system.h"
-#include "components/position.h"
+#include "core/position.h"  // Position_get ECS function (includes struct)
+#include "textures/atlas.h"  // Atlas_getRect (full API)
+#include "tilemap/tilemap.h"  // Tilemap_get_tile
 #include "raylib.h"
 #include <math.h>
 #include <string.h>
@@ -332,18 +334,26 @@ bool ChunkRenderSystem_handle_click(ChunkRenderSystem* system,
                                     int* outTileY) {
     if (!system || !cam) return false;
     
-    // Check if click is within the letterboxed destination rect
-    if (mousePos.x < fit.dest.x || mousePos.x > fit.dest.x + fit.dest.width ||
-        mousePos.y < fit.dest.y || mousePos.y > fit.dest.y + fit.dest.height) {
-        return false;
-    }
+    // On web, mouse coordinates might be in a different coordinate space.
+    // Instead of checking bounds here, just try to convert the coordinates.
+    // The bounds check will happen later if needed.
+    
+    // Debug: log the coordinate transformation
+    TraceLog(LOG_DEBUG, "ChunkRenderSystem_handle_click: mousePos=(%f, %f), fit.dest=(%f, %f, %f, %f), fit.scale=%f", 
+             mousePos.x, mousePos.y, fit.dest.x, fit.dest.y, fit.dest.width, fit.dest.height, fit.scale);
     
     // Convert screen position to world position
+    // Note: mousePos should be in render coordinate space (matching GetRenderWidth/Height)
     Vector2 world = Camera_ScreenToWorld(cam, fit, mousePos);
+    TraceLog(LOG_DEBUG, "ChunkRenderSystem_handle_click: world=(%f, %f), cam.pos=(%f, %f), cam.zoom=%f", 
+             world.x, world.y, cam->pos.x, cam->pos.y, cam->zoom);
     
     // Convert world position to tile coordinates
+    // floorf handles negative coordinates correctly (rounds towards negative infinity)
     int tileX = (int)floorf(world.x / (float)system->tileSize);
     int tileY = (int)floorf(world.y / (float)system->tileSize);
+    
+    TraceLog(LOG_DEBUG, "ChunkRenderSystem_handle_click: tile=(%d, %d)", tileX, tileY);
     
     if (outTileX) *outTileX = tileX;
     if (outTileY) *outTileY = tileY;

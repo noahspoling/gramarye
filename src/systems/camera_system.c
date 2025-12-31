@@ -1,4 +1,5 @@
 #include "systems/camera_system.h"
+#include "core/position.h"
 
 void CameraSystem_apply_zoom(GameState* state, float wheel) {
     if (!state) return;
@@ -25,7 +26,13 @@ void CameraSystem_follow_player(GameState* state) {
 }
 
 AspectFit CameraSystem_compute_fit(GameState* state) {
+    // On web, when canvas is scaled via CSS, GetMousePosition() returns coordinates
+    // in the displayed/scaled space, so we need to use screen dimensions
+    #ifdef PLATFORM_WEB
+    return Camera_ComputeAspectFit(state->cam.logicalSize, GetScreenWidth(), GetScreenHeight());
+    #else
     return Camera_ComputeAspectFit(state->cam.logicalSize, GetRenderWidth(), GetRenderHeight());
+    #endif
 }
 
 void CameraSystem_clamp(GameState* state, AspectFit fit) {

@@ -21,6 +21,7 @@ include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # don't build the supplied examples
 set(BUILD_GAMES    OFF CACHE BOOL "" FORCE) # don't build the supplied example games
+set(BUILD_TESTING  OFF CACHE BOOL "" FORCE) # don't build tests for dependencies (especially for web builds)
 
 FetchContent_Declare(
     raylib
@@ -61,6 +62,13 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(gramarye_libcore)
 
+# Add include directories only (no link dependency) to avoid CMake export issues
+FetchContent_GetProperties(raylib)
+if(TARGET gramarye-libcore AND raylib_POPULATED)
+    # Raylib headers are in the src directory
+    target_include_directories(gramarye-libcore PRIVATE ${raylib_SOURCE_DIR}/src)
+endif()
+
 # Fetch gramarye-ecs library
 FetchContent_Declare(
     gramarye_ecs
@@ -70,7 +78,18 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
 )
 
+# Disable tests for web builds (they use GCC extensions incompatible with Emscripten)
+if(EMSCRIPTEN OR BUILD_WEB)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+endif()
+
 FetchContent_MakeAvailable(gramarye_ecs)
+
+# Exclude test targets from build (they use GCC extensions incompatible with Emscripten)
+# This is especially important for web builds where nested functions don't work
+if(TARGET ecs_tests AND (EMSCRIPTEN OR BUILD_WEB))
+    set_target_properties(ecs_tests PROPERTIES EXCLUDE_FROM_ALL TRUE)
+endif()
 
 # Fetch gramarye-query-engine library
 FetchContent_Declare(
@@ -81,11 +100,72 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
 )
 
+# Ensure tests are disabled for web builds
+if(EMSCRIPTEN OR BUILD_WEB)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+endif()
+
 FetchContent_MakeAvailable(gramarye_query_engine)
 
+# Exclude test targets from build (they may have compatibility issues with Emscripten)
+if(EMSCRIPTEN OR BUILD_WEB)
+    if(TARGET query_tests)
+        set_target_properties(query_tests PROPERTIES EXCLUDE_FROM_ALL TRUE)
+    endif()
+    if(TARGET test_shell)
+        set_target_properties(test_shell PROPERTIES EXCLUDE_FROM_ALL TRUE)
+    endif()
+endif()
+
+# Fetch gramarye-components library
+FetchContent_Declare(
+    gramarye_components
+    GIT_REPOSITORY "https://github.com/noahspoling/gramarye-components.git"
+    GIT_TAG "main"
+    GIT_PROGRESS TRUE
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(gramarye_components)
+
+# Fetch gramarye-component-functions library
+FetchContent_Declare(
+    gramarye_component_functions
+    GIT_REPOSITORY "https://github.com/noahspoling/gramarye-component-functions.git"
+    GIT_TAG "main"
+    GIT_PROGRESS TRUE
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(gramarye_component_functions)
+
+# Fetch gramarye-renderer-raylib library
+FetchContent_Declare(
+    gramarye_renderer_raylib
+    GIT_REPOSITORY "https://github.com/noahspoling/raylib-render-implementation.git"
+    GIT_TAG "main"
+    GIT_PROGRESS TRUE
+    GIT_SHALLOW TRUE
+)
+
+FetchContent_MakeAvailable(gramarye_renderer_raylib)
+
+# Configure renderer-raylib after it's created
+if(TARGET gramarye-renderer-raylib)
+    target_link_libraries(gramarye-renderer-raylib PUBLIC raylib)
+    # Make raylib headers available to renderer-raylib
+    FetchContent_GetProperties(raylib)
+    if(raylib_POPULATED)
+        target_include_directories(gramarye-renderer-raylib PRIVATE ${raylib_SOURCE_DIR}/src)
+    endif()
+    # Make renderer headers available to renderer-raylib (from gramarye/include/renderer)
+    # Also make clay headers available (clay.h is in gramarye/include)
+    target_include_directories(gramarye-renderer-raylib PUBLIC 
+        ${CMAKE_CURRENT_SOURCE_DIR}/include)
+endif()
+
 file(GLOB SRC_FILES "src/*.c")
+file(GLOB RENDERER_FILES "src/renderer/*.c")
 # Note: CORE_FILES, HASH_FILES, and CORE_PLATFORM_FILES are now provided by xmos-libcore
-file(GLOB COMPONENT_FILES "src/components/*.c")
+# Component files are now in gramarye-components and gramarye-component-functions
 file(GLOB SYSTEM_FILES "src/systems/*.c")
 file(GLOB SCREEN_FILES "src/systems/screens/*.c")
 # UI files
@@ -97,7 +177,6 @@ file(GLOB UI_LAYOUT_FILES "src/ui/layout/*.c")
 
 # TODO Reorganize this for segmenting by target executable
 message(STATUS "SRC_FILES: ${SRC_FILES} 
-                COMPONENT_FILES: ${COMPONENT_FILES} 
                 SYSTEM_FILES: ${SYSTEM_FILES} 
                 SCREEN_FILES: ${SCREEN_FILES}
                 UI_FILES: ${UI_FILES}
@@ -106,7 +185,7 @@ message(STATUS "SRC_FILES: ${SRC_FILES}
                 UI_LAYOUT_FILES: ${UI_LAYOUT_FILES}"
 )
 add_executable(game        ${SRC_FILES} 
-                           ${COMPONENT_FILES} 
+                           ${RENDERER_FILES}
                            ${SYSTEM_FILES} 
                            ${SCREEN_FILES}
                            ${UI_FILES}
@@ -118,14 +197,15 @@ add_executable(game        ${SRC_FILES}
 # Web-specific compile/link options for your app
 if(EMSCRIPTEN OR BUILD_WEB)
     target_compile_definitions(game PUBLIC PLATFORM_WEB)
+    
     target_link_options(game PRIVATE
         -sASYNCIFY
         -sALLOW_MEMORY_GROWTH=1
-    -sFORCE_FILESYSTEM=1
-        # Uncomment to package assets into the .data file:
-    --preload-file ${CMAKE_SOURCE_DIR}/resources@resources
-        # Optional: use Emscripten default shell page, or supply raylib's custom shell:
-        # --shell-file ${raylib_SOURCE_DIR}/src/shell.html
+        -sFORCE_FILESYSTEM=1
+        # Package assets into the .data file:
+        --preload-file ${CMAKE_SOURCE_DIR}/resources@resources
+        # Use custom shell.html which constrains the game to a centered, contained box
+        --shell-file ${CMAKE_SOURCE_DIR}/shell.html
     )
 endif()
 
@@ -135,6 +215,20 @@ endif()
 
 # Game Include
 target_compile_options(game PUBLIC)
+
+# Link raylib to component-functions (needed for Atlas, Animation, etc.)
+if(TARGET gramarye-component-functions)
+    target_link_libraries(gramarye-component-functions PUBLIC raylib)
+    # Make raylib headers available to component-functions
+    FetchContent_GetProperties(raylib)
+    if(raylib_POPULATED)
+        target_include_directories(gramarye-component-functions PRIVATE ${raylib_SOURCE_DIR}/src)
+    endif()
+endif()
+
+# Note: raylib-render-implementation is added as subdirectory above
+# We'll configure it after it's added
+
 target_link_libraries(game PUBLIC 
     raylib 
     sxml 
@@ -142,17 +236,22 @@ target_link_libraries(game PUBLIC
     gramarye-libcore  # Link against gramarye-libcore library
     gramarye-ecs
     gramarye-query-engine
+    gramarye-component-functions  # This transitively includes gramarye-components
+    gramarye-renderer-raylib  # Raylib renderer implementation
+    # Note: gramarye-components is linked via gramarye-component-functions
+    # to ensure correct include path order (component-functions headers come first)
 )
 target_include_directories(game PUBLIC 
                                 ./include 
                                 # Core includes come from gramarye-libcore library
-                                ./include/components 
+                                # Component includes come from gramarye-components and gramarye-component-functions
                                 ./include/systems 
                                 ./include/systems/screens
                                 ./include/ui
                                 ./include/ui/elements
                                 ./include/ui/shared
-                                ./include/ui/layout)
+                                ./include/ui/layout
+                                ./include/renderer)
 
 if(MSVC)
   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")

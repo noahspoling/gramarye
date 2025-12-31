@@ -2,8 +2,8 @@
 #define CHUNK_RENDER_SYSTEM_H
 
 #include "raylib.h"
-#include "tilemap.h"
-#include "atlas.h"
+#include "tilemap/tilemap.h"  // From gramarye-components
+#include "textures/atlas.h"  // Full Atlas API from gramarye-component-functions
 #include "camera.h"
 #include "gramarye_ecs/ecs.h"
 #include "gramarye_ecs/entity.h"

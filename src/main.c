@@ -1,13 +1,16 @@
 #include <stdio.h>
-#include "raylib.h"
+#include <stdlib.h>
+#include "raylib.h"  // Still needed for Vector2 type used by GameSystem
 #define CLAY_IMPLEMENTATION
 #include "clay.h"
-#include "../raylib/clay_renderer_raylib.c"
+#include "clay_renderer_raylib.h"  // Now from raylib-render-implementation
 #include "arena.h"
 #include "assert.h"
 
 #include "camera.h"
 #include "systems/game_system.h"
+#include "renderer/renderer.h"
+#include "renderer_raylib.h"
 
 // Keep these here as bootstrap constants. GameSystem owns their usage.
 #define TILE_SIZE 16
@@ -41,9 +44,16 @@ int main(void) {
     =======================Library Initialization======================
     */
     
-    // Initialize Raylib window
-    Clay_Raylib_Initialize((int)ScreenWidth, (int)ScreenHeight, "Clay with Raylib Example", FLAG_BORDERLESS_WINDOWED_MODE | FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
-    // SetExitKey(KEY_NULL);
+    // Create renderer (backend-agnostic)
+    Renderer* renderer = RendererRaylib_create();
+    if (!renderer) {
+        fprintf(stderr, "Failed to create renderer\n");
+        return 1;
+    }
+    
+    // Initialize renderer window
+    Renderer_init(renderer, (int)ScreenWidth, (int)ScreenHeight, "Gramarye Game", 
+                  0x00000001 | 0x00000040 | 0x00000080 | 0x00000004); // FLAG_BORDERLESS_WINDOWED_MODE | FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE
 
     //Clay initialization
     uint64_t clayMemorySize = Clay_MinMemorySize();
@@ -63,18 +73,30 @@ int main(void) {
 
     Arena_T arena = Arena_new();
 
-    SetTargetFPS(60);
-    GameSystem* game = GameSystem_create(arena, MAP_SIZE, TILE_SIZE, (Vector2){ ScreenWidth, ScreenHeight });
+    // Get window size from renderer for game system
+    RenderVector2 windowSize = Renderer_get_window_size(renderer);
+    GameSystem* game = GameSystem_create(arena, MAP_SIZE, TILE_SIZE, (Vector2){ windowSize.x, windowSize.y });
 
-    while (!WindowShouldClose()) {
-        SetTraceLogLevel(LOG_DEBUG);
-        float dt = GetFrameTime();
-        BeginDrawing();
+    while (!Renderer_should_close(renderer)) {
+        float dt = Renderer_get_delta_time(renderer);
+        
+        Renderer_begin_frame(renderer);
+        
+        // Clear background
+        RenderCommand clearCmd = {0};
+        clearCmd.type = RENDER_COMMAND_TYPE_RECTANGLE;
+        clearCmd.bounds = (RenderRect){0, 0, windowSize.x, windowSize.y};
+        clearCmd.color = (RenderColor){255, 0, 0, 255}; // RED background
+        Renderer_execute_command(renderer, &clearCmd);
+        
         GameSystem_frame(game, dt);
-        EndDrawing();
+        
+        Renderer_end_frame(renderer);
     }
 
     GameSystem_destroy(game);
+    Renderer_close(renderer);
+    RendererRaylib_destroy(renderer);
 
     return 0;
 }

@@ -2,6 +2,13 @@
 
 #include "raylib.h"
 
+// ECS functions (from gramarye-component-functions, includes component structs)
+#include "core/position.h"  // Position_get
+#include "textures/sprite.h"  // Sprite_get
+
+// Atlas functions with raylib types (from gramarye-component-functions)
+#include "textures/atlas.h"  // Atlas_getRect
+
 static void render_player(GameState* state, AspectFit fit) {
     Position* p = Position_get(state->ecs, state->player, state->positionTypeId);
     Sprite* s = Sprite_get(state->ecs, state->player, state->spriteTypeId);

@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="EN-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Gramarye Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: arial, sans-serif;
+        margin: 0;
+        padding: 10px;
+        background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden; /* Prevent scrollbars */
+      }
+
+      #game-container {
+        max-width: 1200px;
+        width: 100%;
+        background-color: #1a1a1a;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      #header {
+        width: 100%;
+        height: 60px;
+        background-color: #2a2a2a;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 20px;
+      }
+
+      .spinner {
+        height: 30px;
+        width: 30px;
+        display: inline-block;
+        vertical-align: middle;
+        -webkit-animation: rotation .8s linear infinite;
+        -moz-animation: rotation .8s linear infinite;
+        -o-animation: rotation .8s linear infinite;
+        animation: rotation 0.8s linear infinite;
+        border-left: 5px solid #2a2a2a;
+        border-right: 5px solid #2a2a2a;
+        border-bottom: 5px solid #2a2a2a;
+        border-top: 5px solid #4a9eff;
+        border-radius: 100%;
+      }
+
+      @-webkit-keyframes rotation {
+        from {-webkit-transform: rotate(0deg);}
+        to {-webkit-transform: rotate(360deg);}
+      }
+      @-moz-keyframes rotation {
+        from {-moz-transform: rotate(0deg);}
+        to {-moz-transform: rotate(360deg);}
+      }
+      @-o-keyframes rotation {
+        from {-o-transform: rotate(0deg);}
+        to {-o-transform: rotate(360deg);}
+      }
+      @keyframes rotation {
+        from {transform: rotate(0deg);}
+        to {transform: rotate(360deg);}
+      }
+
+      #status {
+        display: inline-block;
+        vertical-align: middle;
+        margin-left: 15px;
+        font-weight: bold;
+        color: #e0e0e0;
+      }
+
+      #progress {
+        height: 0px;
+        width: 0px;
+      }
+
+      #controls {
+        display: flex;
+        gap: 10px;
+      }
+
+      /* Container that maintains 16:9 aspect ratio and scales to fit viewport */
+      .canvas-container {
+        position: relative;
+        width: 100%;
+        max-width: min(100vw - 40px, calc((100vh - 120px) * 16 / 9));
+        max-height: calc(100vh - 120px);
+        aspect-ratio: 16 / 9;
+        margin: 0 auto;
+        background-color: #000;
+        border-radius: 4px;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      /* Fallback for browsers that don't support aspect-ratio */
+      @supports not (aspect-ratio: 16 / 9) {
+        .canvas-container::before {
+          content: '';
+          display: block;
+          padding-bottom: 56.25%; /* 9/16 = 0.5625 */
+        }
+      }
+
+      .emscripten_border {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+      }
+
+      /* NOTE: Canvas fills the container, which maintains 16:9 aspect ratio */
+      /* Emscripten sets the actual canvas buffer size programmatically */
+      /* CSS scaling is handled automatically - GetMousePosition() accounts for this on web */
+      canvas.emscripten {
+        border: 0px none;
+        background: black;
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain; /* Maintain aspect ratio while filling container */
+      }
+
+      #output {
+        width: 100%;
+        height: 120px;
+        margin-top: 20px;
+        display: block;
+        background-color: #0a0a0a;
+        color: #25ae26;
+        font-family: 'Lucida Console', Monaco, monospace;
+        font-size: 12px;
+        border: 1px solid #333;
+        border-radius: 4px;
+        padding: 10px;
+        outline: none;
+        resize: none;
+      }
+
+      input[type=button] {
+        background-color: #3a3a3a;
+        border: 2px solid #4a4a4a;
+        color: #e0e0e0;
+        text-decoration: none;
+        cursor: pointer;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-size: 12px;
+        transition: all 0.2s;
+      }
+
+      input[type=button]:hover {
+        background-color: #4a4a4a;
+        border-color: #5a5a5a;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <div id="header">
+        <div style="display: flex; align-items: center;">
+          <div class="spinner" id='spinner'></div>
+          <div id="status">Downloading...</div>
+        </div>
+
+        <span id='controls'>
+          <input type="button" value="🖵 FULLSCREEN" onclick="Module.requestFullscreen(false, false)">
+          <input type="button" id="btn-audio" value="🔇 MUTE" onclick="toggleAudio()">
+        </span>
+
+        <div style="display: none;">
+          <progress value="0" max="100" id="progress" hidden=1></progress>
+        </div>
+      </div>
+
+      <div class="canvas-container">
+        <div class="emscripten_border">
+          <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+        </div>
+      </div>
+
+      <textarea id="output" rows="6"></textarea>
+    </div>
+
+    <script>
+        var statusElement = document.getElementById('status');
+        var progressElement = document.getElementById('progress');
+        var spinnerElement = document.getElementById('spinner');
+        var outputElement = document.getElementById('output');
+
+        function updateStatus(text) {
+            statusElement.textContent = text;
+        }
+
+        var Module = {
+            preRun: [],
+            postRun: [],
+            print: (function() {
+                var element = document.getElementById('output');
+                if (element) element.value = ''; // clear browser cache
+                return function(text) {
+                    if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+
+                    console.log(text);
+
+                    if (element) {
+                        element.value += text + "\n";
+                        element.scrollTop = element.scrollHeight; // focus on bottom
+                    }
+                };
+            })(),
+            printErr: function(text) {
+                if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+
+                console.error(text);
+            },
+            canvas: (function() {
+                var canvas = document.querySelector('#canvas');
+
+                // As a default initial behavior, pop up an alert when webgl context is lost.
+                canvas.addEventListener("webglcontextlost", function(e) { 
+                    alert('WebGL context lost. You will need to reload the page.'); 
+                    e.preventDefault(); 
+                }, false);
+
+                // The container maintains 16:9 aspect ratio and scales to fit the viewport
+                // The canvas fills the container via CSS (width: 100%, height: 100%)
+                // Emscripten sets the actual canvas buffer size programmatically
+                // GetMousePosition() automatically accounts for CSS scaling on web
+
+                return canvas;
+            })(),
+            setStatus: function(text) {
+                if (!Module.setStatus.last) Module.setStatus.last = { time: Date.now(), text: '' };
+                if (text === Module.setStatus.last.text) return;
+
+                var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+                var now = Date.now();
+
+                if (m && now - Module.setStatus.last.time < 30) return; // If this is a progress update, skip it if too soon
+
+                Module.setStatus.last.time = now;
+                Module.setStatus.last.text = text;
+
+                if (m) {
+                    text = m[1];
+                    progressElement.value = parseInt(m[2])*100;
+                    progressElement.max = parseInt(m[4])*100;
+                    progressElement.hidden = true;
+                    spinnerElement.hidden = false;
+                } else {
+                    progressElement.value = null;
+                    progressElement.max = null;
+                    progressElement.hidden = true;
+                    if (!text) spinnerElement.style.display = 'none';
+                }
+
+                statusElement.textContent = text;
+            },
+            totalDependencies: 0,
+            monitorRunDependencies: function(left) {
+                this.totalDependencies = Math.max(this.totalDependencies, left);
+                Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+            },
+        };
+
+        Module.setStatus('Downloading...');
+
+        window.onerror = function() {
+            Module.setStatus('Exception thrown, see JavaScript console');
+            spinnerElement.style.display = 'none';
+            Module.setStatus = function(text) { if (text) Module.printErr('[post-exception status] ' + text); };
+        };
+    </script>
+
+    <!-- Audio context management -->
+    <script type='text/javascript'>
+        var audioBtn = document.querySelector('#btn-audio');
+
+        // An array of all contexts to resume on the page
+        const audioContexList = [];
+        (function() {
+            // A proxy object to intercept AudioContexts and
+            // add them to the array for tracking and resuming later
+            self.AudioContext = new Proxy(self.AudioContext, {
+                construct(target, args) {
+                    const result = new target(...args);
+                    audioContexList.push(result);
+                    if (result.state == "suspended") audioBtn.value = "🔈 RESUME";
+                    return result;
+                }
+            });
+        })();
+
+        function toggleAudio() {
+            var resumed = false;
+            audioContexList.forEach(ctx => {
+                if (ctx.state == "suspended") { ctx.resume(); resumed = true; }
+                else if (ctx.state == "running") ctx.suspend();
+            });
+
+            if (resumed) audioBtn.value = "🔇 MUTE";
+            else audioBtn.value = "🔈 RESUME";
+        }
+    </script>
+    {{{ SCRIPT }}}
+  </body>
+</html>
+

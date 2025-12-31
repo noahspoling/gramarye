@@ -6,17 +6,25 @@
 #include "arena.h"
 #include "raylib.h"
 
-#include "atlas_table.h"
-#include "atlas.h"
-#include "tilemap.h"
+#include "textures/atlas_table.h"
+#include "tilemap/tilemap.h"
 #include "camera.h"
 #include "gramarye_ecs/ecs.h"
 #include "gramarye_ecs/entity.h"
 #include "gramarye_ecs/component.h"
 
-#include "components/health.h"
-#include "components/position.h"
-#include "components/sprite.h"
+// Component structs (from gramarye-components)
+#include "core/bar_value.h"  // Health uses BarValue
+#include "core/position.h"
+#include "textures/sprite.h"
+
+// ECS functions (from gramarye-component-functions, includes structs)
+#include "core/health.h"  // Health_add, Health_get, etc.
+#include "core/position.h"  // Position_add, Position_get, etc.
+#include "textures/sprite.h"  // Sprite_add, Sprite_get, etc.
+
+// Full Atlas API with raylib types (from gramarye-component-functions)
+#include "textures/atlas.h"  // Full definition with Texture2D, Rectangle
 
 #include "systems/chunk_render_system.h"
 
@@ -25,7 +33,7 @@ typedef struct GameState {
     int mapSize;
     int tileSize;
 
-    AtlasTable atlasTable;
+    AtlasTable atlasTable;  // From textures/atlas_table.h
     Atlas* atlas;
     Tilemap* tilemap;
 

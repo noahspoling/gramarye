@@ -100,6 +100,8 @@ static InputSnapshot poll_snapshot_mainthread(void) {
 
     s.mouseLeftPressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
     if (s.mouseLeftPressed) {
+        // Use GetMousePosition() which accounts for canvas scaling on web
+        // This returns coordinates in screen space, matching GetScreenWidth/Height
         s.mousePos = GetMousePosition();
     }
 
