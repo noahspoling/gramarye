@@ -2,10 +2,14 @@
 #include <stdlib.h>
 
 
-void Renderer_init(Renderer* renderer, int width, int height, const char* title, uint32_t flags) {
+void Renderer_init(Renderer* renderer, int width, int height, const char* title, WindowFlags flags) {
     if (renderer && renderer->vtable && renderer->vtable->init) {
         renderer->vtable->init(renderer, width, height, title, flags);
     }
+}
+
+WindowFlags Renderer_get_default_window_flags(void) {
+    return WINDOW_FLAG_VSYNC | WINDOW_FLAG_RESIZABLE | WINDOW_FLAG_MSAA_4X;
 }
 
 void Renderer_close(Renderer* renderer) {

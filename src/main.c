@@ -11,6 +11,7 @@
 #include "systems/game_system.h"
 #include "renderer/renderer.h"
 #include "renderer_raylib.h"
+#include "input_raylib.h"
 
 // Keep these here as bootstrap constants. GameSystem owns their usage.
 #define TILE_SIZE 16
@@ -52,10 +53,8 @@ int main(void) {
     }
     
     // Initialize renderer window
-    Renderer_init(renderer, (int)ScreenWidth, (int)ScreenHeight, "Gramarye Game"
-                //, 0
-                , FLAG_BORDERLESS_WINDOWED_MODE | FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE
-            ); // FLAG_BORDERLESS_WINDOWED_MODE | FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE
+    Renderer_init(renderer, (int)ScreenWidth, (int)ScreenHeight, "Gramarye Game",
+                  Renderer_get_default_window_flags() | WINDOW_FLAG_BORDERLESS);
 
     SetTraceLogLevel(LOG_DEBUG);
     //Clay initialization
@@ -76,9 +75,18 @@ int main(void) {
 
     Arena_T arena = Arena_new();
 
+    // Create input provider (backend-agnostic)
+    InputProvider* inputProvider = InputProviderRaylib_create();
+    if (!inputProvider) {
+        fprintf(stderr, "Failed to create input provider\n");
+        Renderer_close(renderer);
+        RendererRaylib_destroy(renderer);
+        return 1;
+    }
+
     // Get window size from renderer for game system
     RenderVector2 windowSize = Renderer_get_window_size(renderer);
-    GameSystem* game = GameSystem_create(arena, MAP_SIZE, TILE_SIZE, (Vector2){ windowSize.x, windowSize.y });
+    GameSystem* game = GameSystem_create(arena, MAP_SIZE, TILE_SIZE, (Vector2){ windowSize.x, windowSize.y }, inputProvider);
 
     while (!Renderer_should_close(renderer)) {
         float dt = Renderer_get_delta_time(renderer);
@@ -99,6 +107,7 @@ int main(void) {
     }
 
     GameSystem_destroy(game);
+    InputProviderRaylib_destroy(inputProvider);
     Renderer_close(renderer);
     RendererRaylib_destroy(renderer);
 

@@ -6,11 +6,12 @@
 
 #include "arena.h"
 #include "clay.h"
+#include "input/input_provider.h"
 
 typedef struct GameSystem GameSystem;
 
 // Owns all game state: tilemap, entities, camera, render targets, etc.
-GameSystem* GameSystem_create(Arena_T arena, int mapSize, int tileSize, Vector2 logicalSize);
+GameSystem* GameSystem_create(Arena_T arena, int mapSize, int tileSize, Vector2 logicalSize, InputProvider* inputProvider);
 void GameSystem_destroy(GameSystem* game);
 
 // Called once per-frame (handles input/movement/camera + rendering)

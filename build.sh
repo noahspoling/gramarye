@@ -1,11 +1,28 @@
 #!/bin/bash
 # Clean build script for gramarye project
 
-# Check for clean flag
+# Check for flags
 CLEAN=false
-if [ "$1" == "--clean" ] || [ "$1" == "-c" ]; then
-    CLEAN=true
-fi
+USE_LOCAL=false
+
+for arg in "$@"; do
+    case "$arg" in
+        --clean|-c)
+            CLEAN=true
+            ;;
+        --local|-l)
+            USE_LOCAL=true
+            ;;
+        --help|-h)
+            echo "Usage: $0 [OPTIONS]"
+            echo "Options:"
+            echo "  --clean, -c    Perform a full clean build"
+            echo "  --local, -l   Use local module folders instead of FetchContent"
+            echo "  --help, -h     Show this help message"
+            exit 0
+            ;;
+    esac
+done
 
 # Remove old CMake cache and FetchContent dependencies (fixes cache mismatch errors)
 if [ "$CLEAN" == "true" ] && [ -d "bin" ]; then
@@ -24,6 +41,14 @@ fi
 
 mkdir -p bin
 cd bin
-cmake ..
+
+# Build CMake command with optional flags
+CMAKE_ARGS=".."
+if [ "$USE_LOCAL" == "true" ]; then
+    echo "Using local modules..."
+    CMAKE_ARGS="$CMAKE_ARGS -DUSE_LOCAL_MODULES=ON"
+fi
+
+cmake $CMAKE_ARGS
 make
 cd ..

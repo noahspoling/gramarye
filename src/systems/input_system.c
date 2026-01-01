@@ -1,4 +1,5 @@
 #include "systems/input_system.h"
+#include "input/input_provider.h"
 
 #include <math.h>
 #include <string.h>
@@ -71,6 +72,7 @@ static bool InputCommandQueue_pop_try(InputCommandQueue* q, InputCommand* out) {
 
 struct InputSystem {
     bool running;
+    InputProvider* inputProvider;  // Input provider (backend-agnostic)
     // TODO: Replace with C11 thrd_t or C99-compatible thread type
     // Thread_T thread;
 
@@ -84,33 +86,38 @@ struct InputSystem {
 
 // static bool g_threads_initialized = false;
 
-static InputSnapshot poll_snapshot_mainthread(void) {
+static InputSnapshot poll_snapshot_mainthread(InputProvider* inputProvider) {
     InputSnapshot s;
     memset(&s, 0, sizeof(s));
 
+    if (!inputProvider) return s;
+
     // Movement: only one step per frame (discrete)
-    if (IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) s.moveY = -1;
-    else if (IsKeyPressed(KEY_S) || IsKeyPressed(KEY_DOWN)) s.moveY = +1;
+    if (InputProvider_is_key_pressed(inputProvider, INPUT_KEY_W) || 
+        InputProvider_is_key_pressed(inputProvider, INPUT_KEY_UP)) {
+        s.moveY = -1;
+    } else if (InputProvider_is_key_pressed(inputProvider, INPUT_KEY_S) || 
+               InputProvider_is_key_pressed(inputProvider, INPUT_KEY_DOWN)) {
+        s.moveY = +1;
+    }
 
-    if (IsKeyPressed(KEY_A) || IsKeyPressed(KEY_LEFT)) s.moveX = -1;
-    else if (IsKeyPressed(KEY_D) || IsKeyPressed(KEY_RIGHT)) s.moveX = +1;
+    if (InputProvider_is_key_pressed(inputProvider, INPUT_KEY_A) || 
+        InputProvider_is_key_pressed(inputProvider, INPUT_KEY_LEFT)) {
+        s.moveX = -1;
+    } else if (InputProvider_is_key_pressed(inputProvider, INPUT_KEY_D) || 
+               InputProvider_is_key_pressed(inputProvider, INPUT_KEY_RIGHT)) {
+        s.moveX = +1;
+    }
 
-    s.toggleDebug = IsKeyPressed(KEY_F3);
-    s.wheelDelta = GetMouseWheelMove();
+    s.toggleDebug = InputProvider_is_key_pressed(inputProvider, INPUT_KEY_F3);
+    s.wheelDelta = InputProvider_get_mouse_wheel_move(inputProvider);
 
-    s.mouseLeftPressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    s.mouseLeftPressed = InputProvider_is_mouse_button_pressed(inputProvider, INPUT_MOUSE_BUTTON_LEFT);
     if (s.mouseLeftPressed) {
-        // On web, GetMousePosition() returns coordinates in screen space (accounting for CSS scaling)
-        // On desktop, it returns coordinates in screen space
-        // We need to ensure this matches the coordinate space used in CameraSystem_compute_fit
-        #ifdef PLATFORM_WEB
-        // On web, GetMousePosition() already accounts for canvas scaling
-        // and returns coordinates matching GetScreenWidth/GetScreenHeight
-        s.mousePos = GetMousePosition();
-        #else
-        // On desktop, use GetMousePosition() which returns screen coordinates
-        s.mousePos = GetMousePosition();
-        #endif
+        // InputProvider_get_mouse_position returns coordinates in the same space
+        // as the renderer's window dimensions (handled by backend)
+        RenderVector2 mousePos = InputProvider_get_mouse_position(inputProvider);
+        s.mousePos = (Vector2){mousePos.x, mousePos.y};
     }
 
     return s;
@@ -194,7 +201,7 @@ static void process_snapshot(InputSystem* sys, InputSnapshot s) {
     }
 }
 
-InputSystem* InputSystem_create(Arena_T arena) {
+InputSystem* InputSystem_create(Arena_T arena, InputProvider* inputProvider) {
     // TODO: Initialize threads when threading is added
     // if (!g_threads_initialized) {
     //     Thread_init(0);
@@ -203,6 +210,7 @@ InputSystem* InputSystem_create(Arena_T arena) {
 
     InputSystem* sys = (InputSystem*)Arena_alloc(arena, sizeof(InputSystem), __FILE__, __LINE__);
     sys->running = true;
+    sys->inputProvider = inputProvider;
 
     // TODO: Initialize mutexes/condition variables when threading is added
     // Sem_init(&sys->snapshotMutex, 1);
@@ -231,7 +239,7 @@ void InputSystem_destroy(InputSystem* sys) {
 
 void InputSystem_poll_and_publish(InputSystem* sys) {
     if (!sys) return;
-    InputSnapshot s = poll_snapshot_mainthread();
+    InputSnapshot s = poll_snapshot_mainthread(sys->inputProvider);
 
     // TODO: Add mutex locking when threading is added
     // Sem_wait(&sys->snapshotMutex);

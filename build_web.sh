@@ -5,6 +5,24 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# Check for flags
+USE_LOCAL=false
+
+for arg in "$@"; do
+    case "$arg" in
+        --local|-l)
+            USE_LOCAL=true
+            ;;
+        --help|-h)
+            echo "Usage: $0 [OPTIONS]"
+            echo "Options:"
+            echo "  --local, -l   Use local module folders instead of FetchContent"
+            echo "  --help, -h    Show this help message"
+            exit 0
+            ;;
+    esac
+done
+
 have_cmd() { command -v "$1" >/dev/null 2>&1; }
 
 # Try to ensure Emscripten tools are available in this shell
@@ -31,17 +49,24 @@ fi
 
 mkdir -p build-web
 
+# Build CMake command with optional flags
+CMAKE_ARGS="-B build-web -S . -DCMAKE_BUILD_TYPE=Release -DBUILD_WEB=ON"
+if [ "$USE_LOCAL" == "true" ]; then
+    echo "Using local modules..."
+    CMAKE_ARGS="$CMAKE_ARGS -DUSE_LOCAL_MODULES=ON"
+fi
+
 # Configure with Emscripten toolchain
-emcmake cmake -B build-web -S . -DCMAKE_BUILD_TYPE=Release -DBUILD_WEB=ON
+emcmake cmake $CMAKE_ARGS
 
 # Build
 cmake --build build-web -j
 
 # Run locally (prefer emrun if available, otherwise print a simple HTTP server hint)
 if have_cmd emrun; then
-	emrun --no_browser build-web/hello_world.html
+	emrun --no_browser build-web/game.html
 else
 	echo "Tip: emrun not found. To serve locally, you can run:"
 	echo "  python3 -m http.server -d build-web 8000"
-	echo "Then open http://localhost:8000/hello_world.html"
+	echo "Then open http://localhost:8000/game.html"
 fi

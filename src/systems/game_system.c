@@ -90,7 +90,7 @@ static void init_camera(GameState* s, Vector2 logicalSize) {
     s->cam.pos.y = py - viewH * 0.5f;
 }
 
-GameSystem* GameSystem_create(Arena_T arena, int mapSize, int tileSize, Vector2 logicalSize) {
+GameSystem* GameSystem_create(Arena_T arena, int mapSize, int tileSize, Vector2 logicalSize, InputProvider* inputProvider) {
     GameSystem* g = (GameSystem*)Arena_alloc(arena, sizeof(GameSystem), __FILE__, __LINE__);
     g->state.arena = arena;
     g->state.mapSize = mapSize;
@@ -120,7 +120,7 @@ GameSystem* GameSystem_create(Arena_T arena, int mapSize, int tileSize, Vector2 
     
     init_camera(&g->state, logicalSize);
 
-    g->input = InputSystem_create(arena);
+    g->input = InputSystem_create(arena, inputProvider);
 
     return g;
 }

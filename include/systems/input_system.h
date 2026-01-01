@@ -2,9 +2,10 @@
 #define INPUT_SYSTEM_H
 
 #include <stdbool.h>
-#include "raylib.h"
+#include "raylib.h"  // Still needed for Vector2 type in InputCommand
 
 #include "arena.h"
+#include "input/input_provider.h"
 
 typedef struct InputSystem InputSystem;
 
@@ -25,7 +26,7 @@ typedef struct InputCommand {
     } as;
 } InputCommand;
 
-InputSystem* InputSystem_create(Arena_T arena);
+InputSystem* InputSystem_create(Arena_T arena, InputProvider* inputProvider);
 void InputSystem_destroy(InputSystem* sys);
 
 // Main thread only: polls Raylib input APIs and publishes a snapshot to the input thread.

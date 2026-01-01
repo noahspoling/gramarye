@@ -8,6 +8,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # WebAssembly toggle (must be before fetching raylib)
 option(BUILD_WEB "Build with Emscripten (WebAssembly)" OFF)
 
+# Local module development toggle
+option(USE_LOCAL_MODULES "Use local module folders instead of FetchContent" OFF)
+
 # When building for web (via -DBUILD_WEB=ON or emcmake), set platform and output suffix
 if(EMSCRIPTEN OR BUILD_WEB)
     # Ensure raylib configures for Web before it's fetched/built
@@ -51,16 +54,22 @@ if(NOT sxml_POPULATED)
     target_include_directories(sxml PUBLIC ${sxml_SOURCE_DIR})
 endif()
 
-# Fetch xmos-libcore library
-FetchContent_Declare(
-    gramarye_libcore
-    GIT_REPOSITORY "https://github.com/noahspoling/gramarye-libcore.git"
-    GIT_TAG "main"
-    GIT_PROGRESS TRUE
-    GIT_SHALLOW TRUE
-)
-
-FetchContent_MakeAvailable(gramarye_libcore)
+# Fetch or use local gramarye-libcore library
+if(USE_LOCAL_MODULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-libcore/CMakeLists.txt")
+    message(STATUS "Using local gramarye-libcore")
+    # Pass USE_LOCAL_MODULES to subdirectories so they don't fetch dependencies
+    set(USE_LOCAL_MODULES ${USE_LOCAL_MODULES} CACHE BOOL "Use local module folders" FORCE)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-libcore gramarye-libcore)
+else()
+    FetchContent_Declare(
+        gramarye_libcore
+        GIT_REPOSITORY "https://github.com/noahspoling/gramarye-libcore.git"
+        GIT_TAG "main"
+        GIT_PROGRESS TRUE
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(gramarye_libcore)
+endif()
 
 # Add include directories only (no link dependency) to avoid CMake export issues
 FetchContent_GetProperties(raylib)
@@ -69,21 +78,26 @@ if(TARGET gramarye-libcore AND raylib_POPULATED)
     target_include_directories(gramarye-libcore PRIVATE ${raylib_SOURCE_DIR}/src)
 endif()
 
-# Fetch gramarye-ecs library
-FetchContent_Declare(
-    gramarye_ecs
-    GIT_REPOSITORY "https://github.com/noahspoling/gramarye-ecs.git"
-    GIT_TAG "main"
-    GIT_PROGRESS TRUE
-    GIT_SHALLOW TRUE
-)
-
-# Disable tests for web builds (they use GCC extensions incompatible with Emscripten)
-if(EMSCRIPTEN OR BUILD_WEB)
-    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+# Fetch or use local gramarye-ecs library
+if(USE_LOCAL_MODULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-ecs/CMakeLists.txt")
+    message(STATUS "Using local gramarye-ecs")
+    # Pass USE_LOCAL_MODULES to subdirectories
+    set(USE_LOCAL_MODULES ${USE_LOCAL_MODULES} CACHE BOOL "Use local module folders" FORCE)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-ecs gramarye-ecs)
+else()
+    FetchContent_Declare(
+        gramarye_ecs
+        GIT_REPOSITORY "https://github.com/noahspoling/gramarye-ecs.git"
+        GIT_TAG "main"
+        GIT_PROGRESS TRUE
+        GIT_SHALLOW TRUE
+    )
+    # Disable tests for web builds (they use GCC extensions incompatible with Emscripten)
+    if(EMSCRIPTEN OR BUILD_WEB)
+        set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    endif()
+    FetchContent_MakeAvailable(gramarye_ecs)
 endif()
-
-FetchContent_MakeAvailable(gramarye_ecs)
 
 # Exclude test targets from build (they use GCC extensions incompatible with Emscripten)
 # This is especially important for web builds where nested functions don't work
@@ -91,21 +105,24 @@ if(TARGET ecs_tests AND (EMSCRIPTEN OR BUILD_WEB))
     set_target_properties(ecs_tests PROPERTIES EXCLUDE_FROM_ALL TRUE)
 endif()
 
-# Fetch gramarye-query-engine library
-FetchContent_Declare(
-    gramarye_query_engine
-    GIT_REPOSITORY "https://github.com/noahspoling/gramarye-query-engine.git"
-    GIT_TAG "main"
-    GIT_PROGRESS TRUE
-    GIT_SHALLOW TRUE
-)
-
-# Ensure tests are disabled for web builds
-if(EMSCRIPTEN OR BUILD_WEB)
-    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+# Fetch or use local gramarye-query-engine library
+if(USE_LOCAL_MODULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-query-engine/CMakeLists.txt")
+    message(STATUS "Using local gramarye-query-engine")
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-query-engine gramarye-query-engine)
+else()
+    FetchContent_Declare(
+        gramarye_query_engine
+        GIT_REPOSITORY "https://github.com/noahspoling/gramarye-query-engine.git"
+        GIT_TAG "main"
+        GIT_PROGRESS TRUE
+        GIT_SHALLOW TRUE
+    )
+    # Ensure tests are disabled for web builds
+    if(EMSCRIPTEN OR BUILD_WEB)
+        set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    endif()
+    FetchContent_MakeAvailable(gramarye_query_engine)
 endif()
-
-FetchContent_MakeAvailable(gramarye_query_engine)
 
 # Exclude test targets from build (they may have compatibility issues with Emscripten)
 if(EMSCRIPTEN OR BUILD_WEB)
@@ -117,36 +134,52 @@ if(EMSCRIPTEN OR BUILD_WEB)
     endif()
 endif()
 
-# Fetch gramarye-components library
-FetchContent_Declare(
-    gramarye_components
-    GIT_REPOSITORY "https://github.com/noahspoling/gramarye-components.git"
-    GIT_TAG "main"
-    GIT_PROGRESS TRUE
-    GIT_SHALLOW TRUE
-)
-FetchContent_MakeAvailable(gramarye_components)
+# Fetch or use local gramarye-components library
+if(USE_LOCAL_MODULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-components/CMakeLists.txt")
+    message(STATUS "Using local gramarye-components")
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-components gramarye-components)
+else()
+    FetchContent_Declare(
+        gramarye_components
+        GIT_REPOSITORY "https://github.com/noahspoling/gramarye-components.git"
+        GIT_TAG "main"
+        GIT_PROGRESS TRUE
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(gramarye_components)
+endif()
 
-# Fetch gramarye-component-functions library
-FetchContent_Declare(
-    gramarye_component_functions
-    GIT_REPOSITORY "https://github.com/noahspoling/gramarye-component-functions.git"
-    GIT_TAG "main"
-    GIT_PROGRESS TRUE
-    GIT_SHALLOW TRUE
-)
-FetchContent_MakeAvailable(gramarye_component_functions)
+# Fetch or use local gramarye-component-functions library
+if(USE_LOCAL_MODULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-component-functions/CMakeLists.txt")
+    message(STATUS "Using local gramarye-component-functions")
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-component-functions gramarye-component-functions)
+else()
+    FetchContent_Declare(
+        gramarye_component_functions
+        GIT_REPOSITORY "https://github.com/noahspoling/gramarye-component-functions.git"
+        GIT_TAG "main"
+        GIT_PROGRESS TRUE
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(gramarye_component_functions)
+endif()
 
-# Fetch gramarye-renderer-raylib library
-FetchContent_Declare(
-    gramarye_renderer_raylib
-    GIT_REPOSITORY "https://github.com/noahspoling/raylib-render-implementation.git"
-    GIT_TAG "main"
-    GIT_PROGRESS TRUE
-    GIT_SHALLOW TRUE
-)
-
-FetchContent_MakeAvailable(gramarye_renderer_raylib)
+# Fetch or use local gramarye-renderer-raylib library
+if(USE_LOCAL_MODULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../raylib-render-implementation/CMakeLists.txt")
+    message(STATUS "Using local raylib-render-implementation")
+    # Pass USE_LOCAL_MODULES to subdirectories
+    set(USE_LOCAL_MODULES ${USE_LOCAL_MODULES} CACHE BOOL "Use local module folders" FORCE)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../raylib-render-implementation raylib-render-impl)
+else()
+    FetchContent_Declare(
+        gramarye_renderer_raylib
+        GIT_REPOSITORY "https://github.com/noahspoling/raylib-render-implementation.git"
+        GIT_TAG "main"
+        GIT_PROGRESS TRUE
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(gramarye_renderer_raylib)
+endif()
 
 # Configure renderer-raylib after it's created
 if(TARGET gramarye-renderer-raylib)
@@ -164,6 +197,7 @@ endif()
 
 file(GLOB SRC_FILES "src/*.c")
 file(GLOB RENDERER_FILES "src/renderer/*.c")
+file(GLOB INPUT_FILES "src/input/*.c")
 # Note: CORE_FILES, HASH_FILES, and CORE_PLATFORM_FILES are now provided by xmos-libcore
 # Component files are now in gramarye-components and gramarye-component-functions
 file(GLOB SYSTEM_FILES "src/systems/*.c")
@@ -186,6 +220,7 @@ message(STATUS "SRC_FILES: ${SRC_FILES}
 )
 add_executable(game        ${SRC_FILES} 
                            ${RENDERER_FILES}
+                           ${INPUT_FILES}
                            ${SYSTEM_FILES} 
                            ${SCREEN_FILES}
                            ${UI_FILES}

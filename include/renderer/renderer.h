@@ -21,6 +21,16 @@ typedef struct {
     uint8_t r, g, b, a;
 } RenderColor;
 
+// Window configuration flags (backend-agnostic)
+typedef enum {
+    WINDOW_FLAG_NONE = 0,
+    WINDOW_FLAG_VSYNC = 1 << 0,
+    WINDOW_FLAG_RESIZABLE = 1 << 1,
+    WINDOW_FLAG_BORDERLESS = 1 << 2,
+    WINDOW_FLAG_MSAA_4X = 1 << 3,
+    // Add more flags as needed
+} WindowFlags;
+
 typedef enum {
     RENDER_COMMAND_TYPE_NONE,
     RENDER_COMMAND_TYPE_TRIANGLE,
@@ -71,7 +81,7 @@ typedef struct {
 typedef struct RendererVTable {
 
     //Initialization
-    void (*init)(Renderer* renderer, int width, int height, const char* title, uint32_t flags);
+    void (*init)(Renderer* renderer, int width, int height, const char* title, WindowFlags flags);
     void (*close)(Renderer* renderer);
 
     //Frame management
@@ -101,7 +111,10 @@ struct Renderer {
 };
 
 // Renderer functions
-void Renderer_init(Renderer* renderer, int width, int height, const char* title, uint32_t flags);
+void Renderer_init(Renderer* renderer, int width, int height, const char* title, WindowFlags flags);
+
+// Helper function to get default window flags
+WindowFlags Renderer_get_default_window_flags(void);
 void Renderer_close(Renderer* renderer);
 void Renderer_begin_frame(Renderer* renderer);
 void Renderer_end_frame(Renderer* renderer);
