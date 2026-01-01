@@ -13,7 +13,6 @@
 #include "renderer_raylib.h"
 #include "input_raylib.h"
 
-// Keep these here as bootstrap constants. GameSystem owns their usage.
 #define TILE_SIZE 16
 #define MAP_SIZE 128
 
@@ -27,37 +26,19 @@ const float ScreenWidth = 1600.0f;
 const float ScreenHeight = 900.0f;
 
 void clay_assertion_callback(Clay_ErrorData errorText) {
-    // assert(errorText.userData); // Or handle errorText as needed
 }
 
-// Example measure text function
-// static inline Clay_Dimensions MeasureText(Clay_StringSlice text, Clay_TextElementConfig *config, uintptr_t userData) {
-//     // Clay_TextElementConfig contains members such as fontId, fontSize, letterSpacing etc
-//     // Note: Clay_String->chars is not guaranteed to be null terminated
-//     return (Clay_Dimensions) {
-//             .width = text.length * config->fontSize, // <- this will only work for monospace fonts, see the renderers/ directory for more advanced text measurement
-//             .height = config->fontSize
-//     };
-// }
-
 int main(void) {
-    /*
-    =======================Library Initialization======================
-    */
-    
-    // Create renderer (backend-agnostic)
     Renderer* renderer = RendererRaylib_create();
     if (!renderer) {
         fprintf(stderr, "Failed to create renderer\n");
         return 1;
     }
     
-    // Initialize renderer window
     Renderer_init(renderer, (int)ScreenWidth, (int)ScreenHeight, "Gramarye Game",
                   Renderer_get_default_window_flags() | WINDOW_FLAG_BORDERLESS);
 
     SetTraceLogLevel(LOG_DEBUG);
-    //Clay initialization
     uint64_t clayMemorySize = Clay_MinMemorySize();
     Clay_Arena memoryArena = {
         .memory = malloc(clayMemorySize),
@@ -75,7 +56,6 @@ int main(void) {
 
     Arena_T arena = Arena_new();
 
-    // Create input provider (backend-agnostic)
     InputProvider* inputProvider = InputProviderRaylib_create();
     if (!inputProvider) {
         fprintf(stderr, "Failed to create input provider\n");
@@ -84,7 +64,6 @@ int main(void) {
         return 1;
     }
 
-    // Get window size from renderer for game system
     RenderVector2 windowSize = Renderer_get_window_size(renderer);
     GameSystem* game = GameSystem_create(arena, MAP_SIZE, TILE_SIZE, (Vector2){ windowSize.x, windowSize.y }, renderer, inputProvider);
 
@@ -93,11 +72,10 @@ int main(void) {
         
         Renderer_begin_frame(renderer);
         
-        // Clear background using rectangle (full screen clear)
         RenderCommand clearCmd = {0};
         clearCmd.type = RENDER_COMMAND_TYPE_RECTANGLE;
         clearCmd.bounds = (RenderRect){0, 0, windowSize.x, windowSize.y};
-        clearCmd.color = (RenderColor){255, 0, 0, 255}; // RED background
+        clearCmd.color = (RenderColor){255, 0, 0, 255};
         Renderer_execute_command(renderer, &clearCmd);
         
         GameSystem_frame(game, dt);

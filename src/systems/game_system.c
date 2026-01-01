@@ -11,18 +11,19 @@
 #include "systems/tile_edit_system.h"
 #include "systems/render_system.h"
 #include "systems/ui_system.h"
+#include "gramarye_event_bus/event_bus.h"
+#include "gramarye_chunk_controller/tile_update_queue.h"
 #include "gramarye_chunk_renderer/chunk_render_system.h"
-#include "camera.h"  // Required for Camera2DEx and AspectFit used by chunk renderer
+#include "gramarye_chunk_controller/chunk_manager_system.h"
+#include "camera.h"
 
-// ECS functions (from gramarye-component-functions, includes component structs)
-#include "core/position.h"  // Position_add, Position_get, etc.
-#include "core/health.h"  // Health_add, Health_get, etc.
-#include "textures/sprite.h"  // Sprite_add, Sprite_get, etc.
+#include "core/position.h"
+#include "core/health.h"
+#include "textures/sprite.h"
 
-// Atlas and Tilemap functions
-#include "textures/atlas.h"  // Full Atlas API (from gramarye-component-functions)
-#include "textures/atlas_table.h"  // From gramarye-components
-#include "tilemap/tilemap.h"  // From gramarye-components
+#include "textures/atlas.h"
+#include "textures/atlas_table.h"
+#include "tilemap/tilemap.h"
 
 struct GameSystem {
     GameState state;
@@ -63,16 +64,13 @@ static void init_tilemap(GameState* s) {
 static void init_entities(GameState* s) {
     s->ecs = ECS_new(s->arena);
     
-    // Register component types
     s->positionTypeId = ECS_register_component_type(s->ecs, "Position", sizeof(Position));
     s->healthTypeId = ECS_register_component_type(s->ecs, "Health", sizeof(BarValue));
     s->spriteTypeId = ECS_register_component_type(s->ecs, "Sprite", sizeof(Sprite));
 
-    // Create player entity
     EntityRegistry* entityRegistry = ECS_get_entity_registry(s->ecs);
     s->player = Entity_create(entityRegistry);
 
-    // Add components to player
     int startX = s->mapSize / 2;
     int startY = s->mapSize / 2;
     Position_add(s->ecs, s->player, s->positionTypeId, startX, startY);
@@ -105,18 +103,26 @@ GameSystem* GameSystem_create(Arena_T arena, int mapSize, int tileSize, Vector2 
     init_tilemap(&g->state);
     init_entities(&g->state);
 
-    // Initialize chunk render system
+    g->state.eventBus = EventBus_new(arena);
+    
+    TileUpdateQueue_init(&g->state.tileUpdateQueue);
+    
+    ChunkManagerSystem_init(&g->state.chunkManager,
+                            arena,
+                            g->state.tilemap,
+                            g->state.eventBus,
+                            64);
+    
     ChunkRenderSystem_init(&g->state.chunkRenderer,
                           g->state.arena,
                           g->state.tilemap,
                           g->state.atlas,
                           g->state.renderer,
                           g->state.tileSize,
-                          64,  // chunk size: 64x64 tiles
-                          5,   // render radius: 5 chunks
-                          10);  // simulation radius: 10 chunks
+                          64,
+                          5,
+                          10);
     
-    // Add player as observer
     ChunkRenderSystem_add_entity_observer(&g->state.chunkRenderer,
                                          g->state.ecs,
                                          g->state.player,
@@ -141,10 +147,8 @@ void GameSystem_frame(GameSystem* g, float dt) {
     (void)dt;
     if (!g) return;
 
-    // 1) Poll input snapshot (main thread), input thread generates commands.
     InputSystem_poll_and_publish(g->input);
 
-    // 2) Drain commands. Defer placement until after camera is updated/clamped.
     InputCommand deferredPlace[64];
     int deferredCount = 0;
 
@@ -168,25 +172,19 @@ void GameSystem_frame(GameSystem* g, float dt) {
         }
     }
 
-    // 3) Update chunk system (load/unload chunks based on observers)
-    ChunkRenderSystem_update(&g->state.chunkRenderer, g->state.ecs, g->state.positionTypeId);
+    ChunkManagerSystem_process_updates(&g->state.chunkManager, &g->state.tileUpdateQueue);
     
-    // 4) Camera update/clamp
+    ChunkRenderSystem_update(&g->state.chunkRenderer, g->state.ecs, g->state.positionTypeId, &g->state.chunkManager);
+    
     CameraSystem_follow_player(&g->state);
     AspectFit fit = CameraSystem_compute_fit(&g->state);
     CameraSystem_clamp(&g->state, fit);
 
-    // 5) Apply placement with up-to-date camera + fit
     for (int i = 0; i < deferredCount; i++) {
         TileEditSystem_place_tile_at_mouse(&g->state, fit, deferredPlace[i].as.place.mousePos);
     }
 
-    // 6) Render & UI
-    // Note: Background clearing is handled by the renderer in main.c
-    //UISystem_begin();
     RenderSystem_render(&g->state, fit);
-    //UISystem_draw_hud(&g->state);
-    //UISystem_end_and_render();
 }
 
 

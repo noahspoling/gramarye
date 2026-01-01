@@ -1,14 +1,12 @@
 #include "systems/render_system.h"
 
 #include "raylib.h"
-#include "gramarye_chunk_renderer/chunk_render_system.h"  // For CameraHandle, AspectFitHandle types
+#include "gramarye_chunk_renderer/chunk_render_system.h"
 
-// ECS functions (from gramarye-component-functions, includes component structs)
-#include "core/position.h"  // Position_get
-#include "textures/sprite.h"  // Sprite_get
+#include "core/position.h"
+#include "textures/sprite.h"
 
-// Atlas functions with raylib types (from gramarye-component-functions)
-#include "textures/atlas.h"  // Atlas_getRect
+#include "textures/atlas.h"
 
 static void render_player(GameState* state, AspectFit fit) {
     Position* p = Position_get(state->ecs, state->player, state->positionTypeId);

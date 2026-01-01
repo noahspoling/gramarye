@@ -1,13 +1,10 @@
 #include "systems/movement_system.h"
 
-// ECS functions
-#include "core/position.h"  // Position_get, Position_set
+#include "core/position.h"
 
-// Tilemap functions
-#include "tilemap/tilemap.h"  // Tilemap_get_tile
+#include "tilemap/tilemap.h"
 
 static bool is_tile_walkable(uint16_t tile_id) {
-    // Current demo: treat all tiles as walkable.
     (void)tile_id;
     return true;
 }

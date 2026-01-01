@@ -214,6 +214,40 @@ else()
     FetchContent_MakeAvailable(gramarye_chunk_renderer)
 endif()
 
+# Fetch or use local gramarye-event-bus library
+if(USE_LOCAL_MODULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-event-bus/CMakeLists.txt")
+    message(STATUS "Using local gramarye-event-bus")
+    # Pass USE_LOCAL_MODULES to subdirectories
+    set(USE_LOCAL_MODULES ${USE_LOCAL_MODULES} CACHE BOOL "Use local module folders" FORCE)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-event-bus gramarye-event-bus)
+else()
+    FetchContent_Declare(
+        gramarye_event_bus
+        GIT_REPOSITORY "https://github.com/noahspoling/gramarye-event-bus.git"
+        GIT_TAG "main"
+        GIT_PROGRESS TRUE
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(gramarye_event_bus)
+endif()
+
+# Fetch or use local gramarye-chunk-controller library
+if(USE_LOCAL_MODULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-chunk-controller/CMakeLists.txt")
+    message(STATUS "Using local gramarye-chunk-controller")
+    # Pass USE_LOCAL_MODULES to subdirectories
+    set(USE_LOCAL_MODULES ${USE_LOCAL_MODULES} CACHE BOOL "Use local module folders" FORCE)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-chunk-controller gramarye-chunk-controller)
+else()
+    FetchContent_Declare(
+        gramarye_chunk_controller
+        GIT_REPOSITORY "https://github.com/noahspoling/gramarye-chunk-controller.git"
+        GIT_TAG "main"
+        GIT_PROGRESS TRUE
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(gramarye_chunk_controller)
+endif()
+
 # Configure renderer-raylib after it's created
 if(TARGET gramarye-renderer-raylib)
     target_link_libraries(gramarye-renderer-raylib PUBLIC raylib)
@@ -305,6 +339,12 @@ if(TARGET gramarye-chunk-renderer)
     if(raylib_POPULATED)
         target_include_directories(gramarye-chunk-renderer PRIVATE ${raylib_SOURCE_DIR}/src)
     endif()
+    # Make chunk-controller headers available to chunk-renderer (optional dependency)
+    if(TARGET gramarye-chunk-controller)
+        target_include_directories(gramarye-chunk-renderer PRIVATE
+            $<TARGET_PROPERTY:gramarye-chunk-controller,INTERFACE_INCLUDE_DIRECTORIES>
+        )
+    endif()
 endif()
 
 target_link_libraries(game PUBLIC 
@@ -317,6 +357,8 @@ target_link_libraries(game PUBLIC
     gramarye-renderer-interface  # Renderer interface library
     gramarye-component-functions  # This transitively includes gramarye-components
     gramarye-renderer-raylib  # Raylib renderer implementation
+    gramarye-event-bus  # Event bus system
+    gramarye-chunk-controller  # Chunk update/management system
     gramarye-chunk-renderer  # Chunk render system
     # Note: gramarye-components is linked via gramarye-component-functions
     # to ensure correct include path order (component-functions headers come first)

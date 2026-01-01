@@ -4,10 +4,6 @@
 #include <math.h>
 #include <string.h>
 
-// TODO: Replace with C11 threads or C99-compatible threading library
-// #include "thread.h"
-// #include "sem.h"
-
 typedef struct InputSnapshot {
     unsigned int seq;
     int moveX;
@@ -23,41 +19,24 @@ typedef struct InputCommandQueue {
     InputCommand buf[INPUT_QUEUE_CAP];
     int head;
     int tail;
-    // TODO: Replace with C11 mtx_t or C99-compatible mutex
-    // Sem_T mutex;   // binary semaphore as mutex
-    // Sem_T spaces;  // available slots
 } InputCommandQueue;
 
 static void InputCommandQueue_init(InputCommandQueue* q) {
     q->head = 0;
     q->tail = 0;
-    // TODO: Initialize mutex when threading is added
-    // Sem_init(&q->mutex, 1);
-    // Sem_init(&q->spaces, INPUT_QUEUE_CAP);
 }
 
 static void InputCommandQueue_push(InputCommandQueue* q, InputCommand cmd) {
-    // TODO: Add mutex locking when threading is added
-    // Sem_wait(&q->spaces);
-    // Sem_wait(&q->mutex);
-    
-    // Check if queue is full (simple check for single-threaded mode)
     int next_tail = (q->tail + 1) % INPUT_QUEUE_CAP;
     if (next_tail == q->head) {
-        // Queue full, drop oldest entry
         q->head = (q->head + 1) % INPUT_QUEUE_CAP;
     }
     
     q->buf[q->tail] = cmd;
     q->tail = next_tail;
-    
-    // Sem_signal(&q->mutex);
 }
 
 static bool InputCommandQueue_pop_try(InputCommandQueue* q, InputCommand* out) {
-    // TODO: Add mutex locking when threading is added
-    // Sem_wait(&q->mutex);
-    
     bool ok = false;
     if (q->head != q->tail) {
         *out = q->buf[q->head];
@@ -65,26 +44,16 @@ static bool InputCommandQueue_pop_try(InputCommandQueue* q, InputCommand* out) {
         ok = true;
     }
     
-    // Sem_signal(&q->mutex);
-    // if (ok) Sem_signal(&q->spaces);
     return ok;
 }
 
 struct InputSystem {
     bool running;
-    InputProvider* inputProvider;  // Input provider (backend-agnostic)
-    // TODO: Replace with C11 thrd_t or C99-compatible thread type
-    // Thread_T thread;
-
-    // TODO: Replace with C11 mtx_t/cnd_t or C99-compatible synchronization
-    // Sem_T snapshotMutex;
-    // Sem_T snapshotAvailable;
+    InputProvider* inputProvider;
     InputSnapshot snapshot;
 
     InputCommandQueue queue;
 };
-
-// static bool g_threads_initialized = false;
 
 static InputSnapshot poll_snapshot_mainthread(InputProvider* inputProvider) {
     InputSnapshot s;
@@ -92,7 +61,6 @@ static InputSnapshot poll_snapshot_mainthread(InputProvider* inputProvider) {
 
     if (!inputProvider) return s;
 
-    // Movement: only one step per frame (discrete)
     if (InputProvider_is_key_pressed(inputProvider, INPUT_KEY_W) || 
         InputProvider_is_key_pressed(inputProvider, INPUT_KEY_UP)) {
         s.moveY = -1;
@@ -114,8 +82,6 @@ static InputSnapshot poll_snapshot_mainthread(InputProvider* inputProvider) {
 
     s.mouseLeftPressed = InputProvider_is_mouse_button_pressed(inputProvider, INPUT_MOUSE_BUTTON_LEFT);
     if (s.mouseLeftPressed) {
-        // InputProvider_get_mouse_position returns coordinates in the same space
-        // as the renderer's window dimensions (handled by backend)
         RenderVector2 mousePos = InputProvider_get_mouse_position(inputProvider);
         s.mousePos = (Vector2){mousePos.x, mousePos.y};
     }
@@ -123,53 +89,6 @@ static InputSnapshot poll_snapshot_mainthread(InputProvider* inputProvider) {
     return s;
 }
 
-// TODO: Re-enable when threading is added with C11 threads or C99-compatible library
-/*
-static int input_thread_main(void* arg) {
-    InputSystem* sys = (InputSystem*)arg;
-    unsigned int lastSeq = 0;
-
-    while (sys->running) {
-        Sem_wait(&sys->snapshotAvailable);
-        if (!sys->running) break;
-
-        Sem_wait(&sys->snapshotMutex);
-        InputSnapshot s = sys->snapshot;
-        Sem_signal(&sys->snapshotMutex);
-
-        if (s.seq == lastSeq) continue;
-        lastSeq = s.seq;
-
-        if (s.toggleDebug) {
-            InputCommand c = { .type = Cmd_ToggleDebug };
-            InputCommandQueue_push(&sys->queue, c);
-        }
-
-        if (s.wheelDelta != 0.0f) {
-            InputCommand c = { .type = Cmd_Zoom };
-            c.as.zoom.wheel = s.wheelDelta;
-            InputCommandQueue_push(&sys->queue, c);
-        }
-
-        if (s.moveX != 0 || s.moveY != 0) {
-            InputCommand c = { .type = Cmd_Move };
-            c.as.move.dx = s.moveX;
-            c.as.move.dy = s.moveY;
-            InputCommandQueue_push(&sys->queue, c);
-        }
-
-        if (s.mouseLeftPressed) {
-            InputCommand c = { .type = Cmd_PlaceTile };
-            c.as.place.mousePos = s.mousePos;
-            InputCommandQueue_push(&sys->queue, c);
-        }
-    }
-
-    return 0;
-}
-*/
-
-// Single-threaded version: process input directly
 static void process_snapshot(InputSystem* sys, InputSnapshot s) {
     static unsigned int lastSeq = 0;
     
@@ -202,25 +121,13 @@ static void process_snapshot(InputSystem* sys, InputSnapshot s) {
 }
 
 InputSystem* InputSystem_create(Arena_T arena, InputProvider* inputProvider) {
-    // TODO: Initialize threads when threading is added
-    // if (!g_threads_initialized) {
-    //     Thread_init(0);
-    //     g_threads_initialized = true;
-    // }
-
     InputSystem* sys = (InputSystem*)Arena_alloc(arena, sizeof(InputSystem), __FILE__, __LINE__);
     sys->running = true;
     sys->inputProvider = inputProvider;
 
-    // TODO: Initialize mutexes/condition variables when threading is added
-    // Sem_init(&sys->snapshotMutex, 1);
-    // Sem_init(&sys->snapshotAvailable, 0);
     memset(&sys->snapshot, 0, sizeof(sys->snapshot));
 
     InputCommandQueue_init(&sys->queue);
-    
-    // TODO: Create thread when threading is added
-    // sys->thread = Thread_new(input_thread_main, sys, 0);
     
     return sys;
 }
@@ -228,28 +135,15 @@ InputSystem* InputSystem_create(Arena_T arena, InputProvider* inputProvider) {
 void InputSystem_destroy(InputSystem* sys) {
     if (!sys) return;
     sys->running = false;
-    
-    // TODO: Signal thread and join when threading is added
-    // Sem_signal(&sys->snapshotAvailable);
-    // if (sys->thread) {
-    //     Thread_join(sys->thread);
-    //     sys->thread = NULL;
-    // }
 }
 
 void InputSystem_poll_and_publish(InputSystem* sys) {
     if (!sys) return;
     InputSnapshot s = poll_snapshot_mainthread(sys->inputProvider);
 
-    // TODO: Add mutex locking when threading is added
-    // Sem_wait(&sys->snapshotMutex);
     s.seq = sys->snapshot.seq + 1;
     sys->snapshot = s;
-    // Sem_signal(&sys->snapshotMutex);
 
-    // Process input directly in single-threaded mode
-    // TODO: Signal thread when threading is added
-    // Sem_signal(&sys->snapshotAvailable);
     process_snapshot(sys, s);
 }
 

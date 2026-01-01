@@ -29,6 +29,9 @@
 #include "gramarye_chunk_renderer/chunk_render_system.h"
 #include "gramarye_renderer/renderer.h"  // Renderer interface
 #include "camera.h"  // Required for Camera2DEx and AspectFit used by chunk renderer
+#include "gramarye_event_bus/event_bus.h"  // EventBus
+#include "gramarye_chunk_controller/tile_update_queue.h"  // TileUpdateQueue
+#include "gramarye_chunk_controller/chunk_manager_system.h"  // ChunkManagerSystem
 
 typedef struct GameState {
     Arena_T arena;
@@ -48,6 +51,11 @@ typedef struct GameState {
     Renderer* renderer;  // Renderer interface
     Camera2DEx cam;
     ChunkRenderSystem chunkRenderer;
+    
+    // Event and update systems
+    EventBus* eventBus;
+    TileUpdateQueue tileUpdateQueue;
+    ChunkManagerSystem chunkManager;
 
     bool debug;
 

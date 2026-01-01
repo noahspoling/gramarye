@@ -28,11 +28,9 @@ void CameraSystem_follow_player(GameState* state) {
 
 AspectFit CameraSystem_compute_fit(GameState* state) {
     if (!state || !state->renderer) {
-        // Fallback if renderer is not available
         return Camera_ComputeAspectFit(state->cam.logicalSize, 800, 600);
     }
     
-    // Use renderer interface to get render dimensions
     int renderWidth = Renderer_get_render_width(state->renderer);
     int renderHeight = Renderer_get_render_height(state->renderer);
     return Camera_ComputeAspectFit(state->cam.logicalSize, renderWidth, renderHeight);
