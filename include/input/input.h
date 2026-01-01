@@ -1,7 +1,7 @@
 #ifndef INPUT_H
 #define INPUT_H
 
-#include "renderer/renderer.h"
+#include "gramarye_renderer/renderer.h"
 
 typedef struct InputVTable {
     void (*init)(Input* input);

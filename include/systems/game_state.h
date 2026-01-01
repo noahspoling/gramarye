@@ -26,7 +26,9 @@
 // Full Atlas API with raylib types (from gramarye-component-functions)
 #include "textures/atlas.h"  // Full definition with Texture2D, Rectangle
 
-#include "systems/chunk_render_system.h"
+#include "gramarye_chunk_renderer/chunk_render_system.h"
+#include "gramarye_renderer/renderer.h"  // Renderer interface
+#include "camera.h"  // Required for Camera2DEx and AspectFit used by chunk renderer
 
 typedef struct GameState {
     Arena_T arena;
@@ -43,6 +45,7 @@ typedef struct GameState {
     ComponentTypeId spriteTypeId;
     EntityId player;
 
+    Renderer* renderer;  // Renderer interface
     Camera2DEx cam;
     ChunkRenderSystem chunkRenderer;
 

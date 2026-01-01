@@ -1,5 +1,5 @@
 #include "systems/input_system.h"
-#include "input/input_provider.h"
+#include "gramarye_renderer/input_provider.h"
 
 #include <math.h>
 #include <string.h>

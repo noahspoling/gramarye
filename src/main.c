@@ -3,13 +3,13 @@
 #include "raylib.h"  // Still needed for Vector2 type used by GameSystem
 #define CLAY_IMPLEMENTATION
 #include "clay.h"
-#include "clay_renderer_raylib.h"  // Now from raylib-render-implementation
+#include "clay_renderer_raylib.h"  // Now from gramarye-raylib-implementation
 #include "arena.h"
 #include "assert.h"
 
 #include "camera.h"
 #include "systems/game_system.h"
-#include "renderer/renderer.h"
+#include "gramarye_renderer/renderer.h"
 #include "renderer_raylib.h"
 #include "input_raylib.h"
 
@@ -86,7 +86,7 @@ int main(void) {
 
     // Get window size from renderer for game system
     RenderVector2 windowSize = Renderer_get_window_size(renderer);
-    GameSystem* game = GameSystem_create(arena, MAP_SIZE, TILE_SIZE, (Vector2){ windowSize.x, windowSize.y }, inputProvider);
+    GameSystem* game = GameSystem_create(arena, MAP_SIZE, TILE_SIZE, (Vector2){ windowSize.x, windowSize.y }, renderer, inputProvider);
 
     while (!Renderer_should_close(renderer)) {
         float dt = Renderer_get_delta_time(renderer);

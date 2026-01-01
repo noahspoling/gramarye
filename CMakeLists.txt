@@ -164,21 +164,54 @@ else()
     FetchContent_MakeAvailable(gramarye_component_functions)
 endif()
 
-# Fetch or use local gramarye-renderer-raylib library
-if(USE_LOCAL_MODULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../raylib-render-implementation/CMakeLists.txt")
-    message(STATUS "Using local raylib-render-implementation")
+if(USE_LOCAL_MODULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-renderer-interface/CMakeLists.txt")
+    message(STATUS "Using local gramarye-renderer-interface")
     # Pass USE_LOCAL_MODULES to subdirectories
     set(USE_LOCAL_MODULES ${USE_LOCAL_MODULES} CACHE BOOL "Use local module folders" FORCE)
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../raylib-render-implementation raylib-render-impl)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-renderer-interface gramarye-renderer-interface)
+else()
+    FetchContent_Declare(
+        gramarye_renderer_interface
+        GIT_REPOSITORY "https://github.com/noahspoling/gramarye-renderer-interface.git"
+        GIT_TAG "main"
+        GIT_PROGRESS TRUE
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(gramarye_renderer_interface)
+endif()
+
+# Fetch or use local gramarye-renderer-raylib library
+if(USE_LOCAL_MODULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-raylib-implementation/CMakeLists.txt")
+    message(STATUS "Using local gramarye-raylib-implementation")
+    # Pass USE_LOCAL_MODULES to subdirectories
+    set(USE_LOCAL_MODULES ${USE_LOCAL_MODULES} CACHE BOOL "Use local module folders" FORCE)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-raylib-implementation gramarye-raylib-impl)
 else()
     FetchContent_Declare(
         gramarye_renderer_raylib
-        GIT_REPOSITORY "https://github.com/noahspoling/raylib-render-implementation.git"
+        GIT_REPOSITORY "https://github.com/noahspoling/gramarye-raylib-implementation.git"
         GIT_TAG "main"
         GIT_PROGRESS TRUE
         GIT_SHALLOW TRUE
     )
     FetchContent_MakeAvailable(gramarye_renderer_raylib)
+endif()
+
+# Fetch or use local gramarye-chunk-renderer library
+if(USE_LOCAL_MODULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-chunk-renderer/CMakeLists.txt")
+    message(STATUS "Using local gramarye-chunk-renderer")
+    # Pass USE_LOCAL_MODULES to subdirectories
+    set(USE_LOCAL_MODULES ${USE_LOCAL_MODULES} CACHE BOOL "Use local module folders" FORCE)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-chunk-renderer gramarye-chunk-renderer)
+else()
+    FetchContent_Declare(
+        gramarye_chunk_renderer
+        GIT_REPOSITORY "https://github.com/noahspoling/gramarye-chunk-renderer.git"
+        GIT_TAG "main"
+        GIT_PROGRESS TRUE
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(gramarye_chunk_renderer)
 endif()
 
 # Configure renderer-raylib after it's created
@@ -200,7 +233,10 @@ file(GLOB RENDERER_FILES "src/renderer/*.c")
 file(GLOB INPUT_FILES "src/input/*.c")
 # Note: CORE_FILES, HASH_FILES, and CORE_PLATFORM_FILES are now provided by xmos-libcore
 # Component files are now in gramarye-components and gramarye-component-functions
+# Chunk render system is now in gramarye-chunk-renderer library
 file(GLOB SYSTEM_FILES "src/systems/*.c")
+# Remove chunk_render_system.c from SYSTEM_FILES (it's now in gramarye-chunk-renderer)
+list(REMOVE_ITEM SYSTEM_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/systems/chunk_render_system.c")
 file(GLOB SCREEN_FILES "src/systems/screens/*.c")
 # UI files
 file(GLOB UI_FILES "src/ui/*.c")
@@ -261,8 +297,15 @@ if(TARGET gramarye-component-functions)
     endif()
 endif()
 
-# Note: raylib-render-implementation is added as subdirectory above
-# We'll configure it after it's added
+# Configure chunk-renderer after it's created
+if(TARGET gramarye-chunk-renderer)
+    target_link_libraries(gramarye-chunk-renderer PUBLIC raylib)
+    # Make raylib headers available to chunk-renderer
+    FetchContent_GetProperties(raylib)
+    if(raylib_POPULATED)
+        target_include_directories(gramarye-chunk-renderer PRIVATE ${raylib_SOURCE_DIR}/src)
+    endif()
+endif()
 
 target_link_libraries(game PUBLIC 
     raylib 
@@ -271,8 +314,10 @@ target_link_libraries(game PUBLIC
     gramarye-libcore  # Link against gramarye-libcore library
     gramarye-ecs
     gramarye-query-engine
+    gramarye-renderer-interface  # Renderer interface library
     gramarye-component-functions  # This transitively includes gramarye-components
     gramarye-renderer-raylib  # Raylib renderer implementation
+    gramarye-chunk-renderer  # Chunk render system
     # Note: gramarye-components is linked via gramarye-component-functions
     # to ensure correct include path order (component-functions headers come first)
 )

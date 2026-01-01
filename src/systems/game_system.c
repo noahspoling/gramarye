@@ -11,7 +11,9 @@
 #include "systems/tile_edit_system.h"
 #include "systems/render_system.h"
 #include "systems/ui_system.h"
-#include "systems/chunk_render_system.h"
+#include "gramarye_chunk_renderer/chunk_render_system.h"
+#include "camera.h"  // Required for Camera2DEx and AspectFit used by chunk renderer
+
 // ECS functions (from gramarye-component-functions, includes component structs)
 #include "core/position.h"  // Position_add, Position_get, etc.
 #include "core/health.h"  // Health_add, Health_get, etc.
@@ -90,11 +92,12 @@ static void init_camera(GameState* s, Vector2 logicalSize) {
     s->cam.pos.y = py - viewH * 0.5f;
 }
 
-GameSystem* GameSystem_create(Arena_T arena, int mapSize, int tileSize, Vector2 logicalSize, InputProvider* inputProvider) {
+GameSystem* GameSystem_create(Arena_T arena, int mapSize, int tileSize, Vector2 logicalSize, Renderer* renderer, InputProvider* inputProvider) {
     GameSystem* g = (GameSystem*)Arena_alloc(arena, sizeof(GameSystem), __FILE__, __LINE__);
     g->state.arena = arena;
     g->state.mapSize = mapSize;
     g->state.tileSize = tileSize;
+    g->state.renderer = renderer;
     g->state.debug = false;
     g->state.hasLastClick = false;
 
@@ -107,10 +110,11 @@ GameSystem* GameSystem_create(Arena_T arena, int mapSize, int tileSize, Vector2 
                           g->state.arena,
                           g->state.tilemap,
                           g->state.atlas,
+                          g->state.renderer,
                           g->state.tileSize,
                           64,  // chunk size: 64x64 tiles
                           5,   // render radius: 5 chunks
-                          10); // simulation radius: 10 chunks
+                          10);  // simulation radius: 10 chunks
     
     // Add player as observer
     ChunkRenderSystem_add_entity_observer(&g->state.chunkRenderer,

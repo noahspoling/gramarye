@@ -5,7 +5,7 @@
 #include "raylib.h"  // Still needed for Vector2 type in InputCommand
 
 #include "arena.h"
-#include "input/input_provider.h"
+#include "gramarye_renderer/input_provider.h"
 
 typedef struct InputSystem InputSystem;
 

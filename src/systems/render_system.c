@@ -1,6 +1,7 @@
 #include "systems/render_system.h"
 
 #include "raylib.h"
+#include "gramarye_chunk_renderer/chunk_render_system.h"  // For CameraHandle, AspectFitHandle types
 
 // ECS functions (from gramarye-component-functions, includes component structs)
 #include "core/position.h"  // Position_get
@@ -37,7 +38,8 @@ static void render_debug_last_click(GameState* state, AspectFit fit) {
 
 void RenderSystem_render(GameState* state, AspectFit fit) {
     if (!state) return;
-    ChunkRenderSystem_render(&state->chunkRenderer, state->ecs, state->positionTypeId, &state->cam, fit);
+    ChunkRenderSystem_render(&state->chunkRenderer, state->ecs, state->positionTypeId, 
+                            (CameraHandle)&state->cam, (AspectFitHandle)&fit);
     render_debug_last_click(state, fit);
     render_player(state, fit);
 }

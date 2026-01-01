@@ -1,5 +1,6 @@
 #include "systems/camera_system.h"
 #include "core/position.h"
+#include "gramarye_renderer/renderer.h"
 
 void CameraSystem_apply_zoom(GameState* state, float wheel) {
     if (!state) return;
@@ -26,32 +27,15 @@ void CameraSystem_follow_player(GameState* state) {
 }
 
 AspectFit CameraSystem_compute_fit(GameState* state) {
-    // On web, when the canvas is scaled via CSS, we need to ensure the coordinate
-    // space used for aspect fit calculation matches the coordinate space of
-    // GetMousePosition().
-    //
-    // The issue: On web, GetMousePosition() accounts for CSS scaling and returns
-    // coordinates in the displayed space. However, GetScreenWidth()/GetScreenHeight()
-    // return the actual canvas dimensions, which might not match the displayed space
-    // if CSS is scaling the canvas.
-    //
-    // Solution: Use GetRenderWidth()/GetRenderHeight() on web as well, which should
-    // return the actual render target dimensions. GetMousePosition() on web should
-    // return coordinates that match these dimensions after accounting for CSS scaling.
-    // However, raylib's web implementation should handle this automatically.
-    //
-    // Actually, the real fix is simpler: On web, GetMousePosition() should return
-    // coordinates in screen space (accounting for CSS), and GetScreenWidth()/Height()
-    // should return the screen dimensions. But to be safe, let's use render dimensions
-    // consistently and ensure GetMousePosition() matches.
-    #ifdef PLATFORM_WEB
-    // On web, use render dimensions to match the coordinate space
-    // GetMousePosition() should return coordinates in this space (after CSS scaling is accounted for)
-    return Camera_ComputeAspectFit(state->cam.logicalSize, GetRenderWidth(), GetRenderHeight());
-    #else
-    // On desktop, use render dimensions
-    return Camera_ComputeAspectFit(state->cam.logicalSize, GetRenderWidth(), GetRenderHeight());
-    #endif
+    if (!state || !state->renderer) {
+        // Fallback if renderer is not available
+        return Camera_ComputeAspectFit(state->cam.logicalSize, 800, 600);
+    }
+    
+    // Use renderer interface to get render dimensions
+    int renderWidth = Renderer_get_render_width(state->renderer);
+    int renderHeight = Renderer_get_render_height(state->renderer);
+    return Camera_ComputeAspectFit(state->cam.logicalSize, renderWidth, renderHeight);
 }
 
 void CameraSystem_clamp(GameState* state, AspectFit fit) {
