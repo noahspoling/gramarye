@@ -173,7 +173,7 @@ else()
     FetchContent_Declare(
         gramarye_renderer_interface
         GIT_REPOSITORY "https://github.com/noahspoling/gramarye-renderer-interface.git"
-        GIT_TAG "main"
+        GIT_TAG "master"
         GIT_PROGRESS TRUE
         GIT_SHALLOW TRUE
     )
