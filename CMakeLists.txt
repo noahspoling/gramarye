@@ -207,7 +207,7 @@ else()
     FetchContent_Declare(
         gramarye_chunk_renderer
         GIT_REPOSITORY "https://github.com/noahspoling/gramarye-chunk-renderer.git"
-        GIT_TAG "main"
+        GIT_TAG "master"
         GIT_PROGRESS TRUE
         GIT_SHALLOW TRUE
     )
