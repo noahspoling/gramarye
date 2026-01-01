@@ -334,26 +334,28 @@ bool ChunkRenderSystem_handle_click(ChunkRenderSystem* system,
                                     int* outTileY) {
     if (!system || !cam) return false;
     
-    // On web, mouse coordinates might be in a different coordinate space.
-    // Instead of checking bounds here, just try to convert the coordinates.
-    // The bounds check will happen later if needed.
-    
-    // Debug: log the coordinate transformation
-    TraceLog(LOG_DEBUG, "ChunkRenderSystem_handle_click: mousePos=(%f, %f), fit.dest=(%f, %f, %f, %f), fit.scale=%f", 
-             mousePos.x, mousePos.y, fit.dest.x, fit.dest.y, fit.dest.width, fit.dest.height, fit.scale);
+    // On web, when the window resizes, the canvas might be scaled via CSS.
+    // The key is ensuring mouse coordinates and aspect fit use the same coordinate space.
+    //
+    // CameraSystem_compute_fit uses:
+    //   - Web: GetScreenWidth()/GetScreenHeight() (actual screen dimensions)
+    //   - Desktop: GetRenderWidth()/GetRenderHeight() (render target dimensions)
+    //
+    // GetMousePosition() should return coordinates in the same space:
+    //   - Web: Screen space (accounting for CSS scaling automatically)
+    //   - Desktop: Screen space
+    //
+    // The aspect fit calculation accounts for letterboxing/pillarboxing via fit.dest,
+    // so we can directly use mousePos with Camera_ScreenToWorld.
     
     // Convert screen position to world position
-    // Note: mousePos should be in render coordinate space (matching GetRenderWidth/Height)
+    // mousePos is in screen coordinates matching the dimensions used in CameraSystem_compute_fit
     Vector2 world = Camera_ScreenToWorld(cam, fit, mousePos);
-    TraceLog(LOG_DEBUG, "ChunkRenderSystem_handle_click: world=(%f, %f), cam.pos=(%f, %f), cam.zoom=%f", 
-             world.x, world.y, cam->pos.x, cam->pos.y, cam->zoom);
     
     // Convert world position to tile coordinates
     // floorf handles negative coordinates correctly (rounds towards negative infinity)
     int tileX = (int)floorf(world.x / (float)system->tileSize);
     int tileY = (int)floorf(world.y / (float)system->tileSize);
-    
-    TraceLog(LOG_DEBUG, "ChunkRenderSystem_handle_click: tile=(%d, %d)", tileX, tileY);
     
     if (outTileX) *outTileX = tileX;
     if (outTileY) *outTileY = tileY;

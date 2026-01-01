@@ -52,9 +52,12 @@ int main(void) {
     }
     
     // Initialize renderer window
-    Renderer_init(renderer, (int)ScreenWidth, (int)ScreenHeight, "Gramarye Game", 
-                  0x00000001 | 0x00000040 | 0x00000080 | 0x00000004); // FLAG_BORDERLESS_WINDOWED_MODE | FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE
+    Renderer_init(renderer, (int)ScreenWidth, (int)ScreenHeight, "Gramarye Game"
+                //, 0
+                , FLAG_BORDERLESS_WINDOWED_MODE | FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE
+            ); // FLAG_BORDERLESS_WINDOWED_MODE | FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE
 
+    SetTraceLogLevel(LOG_DEBUG);
     //Clay initialization
     uint64_t clayMemorySize = Clay_MinMemorySize();
     Clay_Arena memoryArena = {
@@ -82,7 +85,7 @@ int main(void) {
         
         Renderer_begin_frame(renderer);
         
-        // Clear background
+        // Clear background using rectangle (full screen clear)
         RenderCommand clearCmd = {0};
         clearCmd.type = RENDER_COMMAND_TYPE_RECTANGLE;
         clearCmd.bounds = (RenderRect){0, 0, windowSize.x, windowSize.y};
@@ -90,6 +93,7 @@ int main(void) {
         Renderer_execute_command(renderer, &clearCmd);
         
         GameSystem_frame(game, dt);
+        TraceLog(LOG_DEBUG, "GameSystem_frame: dt = %f", dt);
         
         Renderer_end_frame(renderer);
     }

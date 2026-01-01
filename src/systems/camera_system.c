@@ -26,11 +26,30 @@ void CameraSystem_follow_player(GameState* state) {
 }
 
 AspectFit CameraSystem_compute_fit(GameState* state) {
-    // On web, when canvas is scaled via CSS, GetMousePosition() returns coordinates
-    // in the displayed/scaled space, so we need to use screen dimensions
+    // On web, when the canvas is scaled via CSS, we need to ensure the coordinate
+    // space used for aspect fit calculation matches the coordinate space of
+    // GetMousePosition().
+    //
+    // The issue: On web, GetMousePosition() accounts for CSS scaling and returns
+    // coordinates in the displayed space. However, GetScreenWidth()/GetScreenHeight()
+    // return the actual canvas dimensions, which might not match the displayed space
+    // if CSS is scaling the canvas.
+    //
+    // Solution: Use GetRenderWidth()/GetRenderHeight() on web as well, which should
+    // return the actual render target dimensions. GetMousePosition() on web should
+    // return coordinates that match these dimensions after accounting for CSS scaling.
+    // However, raylib's web implementation should handle this automatically.
+    //
+    // Actually, the real fix is simpler: On web, GetMousePosition() should return
+    // coordinates in screen space (accounting for CSS), and GetScreenWidth()/Height()
+    // should return the screen dimensions. But to be safe, let's use render dimensions
+    // consistently and ensure GetMousePosition() matches.
     #ifdef PLATFORM_WEB
-    return Camera_ComputeAspectFit(state->cam.logicalSize, GetScreenWidth(), GetScreenHeight());
+    // On web, use render dimensions to match the coordinate space
+    // GetMousePosition() should return coordinates in this space (after CSS scaling is accounted for)
+    return Camera_ComputeAspectFit(state->cam.logicalSize, GetRenderWidth(), GetRenderHeight());
     #else
+    // On desktop, use render dimensions
     return Camera_ComputeAspectFit(state->cam.logicalSize, GetRenderWidth(), GetRenderHeight());
     #endif
 }

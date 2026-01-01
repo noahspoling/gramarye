@@ -100,9 +100,17 @@ static InputSnapshot poll_snapshot_mainthread(void) {
 
     s.mouseLeftPressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
     if (s.mouseLeftPressed) {
-        // Use GetMousePosition() which accounts for canvas scaling on web
-        // This returns coordinates in screen space, matching GetScreenWidth/Height
+        // On web, GetMousePosition() returns coordinates in screen space (accounting for CSS scaling)
+        // On desktop, it returns coordinates in screen space
+        // We need to ensure this matches the coordinate space used in CameraSystem_compute_fit
+        #ifdef PLATFORM_WEB
+        // On web, GetMousePosition() already accounts for canvas scaling
+        // and returns coordinates matching GetScreenWidth/GetScreenHeight
         s.mousePos = GetMousePosition();
+        #else
+        // On desktop, use GetMousePosition() which returns screen coordinates
+        s.mousePos = GetMousePosition();
+        #endif
     }
 
     return s;

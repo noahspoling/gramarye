@@ -179,11 +179,11 @@ void GameSystem_frame(GameSystem* g, float dt) {
     }
 
     // 6) Render & UI
-    ClearBackground(RED);
-    UISystem_begin();
+    // Note: Background clearing is handled by the renderer in main.c
+    //UISystem_begin();
     RenderSystem_render(&g->state, fit);
-    UISystem_draw_hud(&g->state);
-    UISystem_end_and_render();
+    //UISystem_draw_hud(&g->state);
+    //UISystem_end_and_render();
 }
 
 
