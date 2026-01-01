@@ -224,7 +224,7 @@ else()
     FetchContent_Declare(
         gramarye_event_bus
         GIT_REPOSITORY "https://github.com/noahspoling/gramarye-event-bus.git"
-        GIT_TAG "main"
+        GIT_TAG "master"
         GIT_PROGRESS TRUE
         GIT_SHALLOW TRUE
     )
@@ -241,7 +241,7 @@ else()
     FetchContent_Declare(
         gramarye_chunk_controller
         GIT_REPOSITORY "https://github.com/noahspoling/gramarye-chunk-controller.git"
-        GIT_TAG "main"
+        GIT_TAG "master"
         GIT_PROGRESS TRUE
         GIT_SHALLOW TRUE
     )
