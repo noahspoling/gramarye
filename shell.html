@@ -113,6 +113,7 @@
         display: flex;
         justify-content: center;
         align-items: center;
+        pointer-events: auto; /* Ensure container allows pointer events */
       }
 
       /* Fallback for browsers that don't support aspect-ratio */
@@ -131,6 +132,7 @@
         justify-content: center;
         align-items: center;
         position: relative;
+        pointer-events: auto; /* Ensure border div allows pointer events */
       }
 
       /* NOTE: Canvas fills the container, which maintains 16:9 aspect ratio */
@@ -143,6 +145,13 @@
         width: 100%;
         height: 100%;
         object-fit: contain; /* Maintain aspect ratio while filling container */
+        pointer-events: auto; /* Ensure canvas receives mouse events */
+        user-select: none; /* Prevent text selection on canvas */
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        touch-action: none; /* Prevent touch gestures from interfering */
+        outline: none; /* Remove focus outline */
       }
 
       #output {
@@ -199,7 +208,7 @@
 
       <div class="canvas-container">
         <div class="emscripten_border">
-          <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+          <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="0"></canvas>
         </div>
       </div>
 
@@ -245,6 +254,21 @@
                 canvas.addEventListener("webglcontextlost", function(e) { 
                     alert('WebGL context lost. You will need to reload the page.'); 
                     e.preventDefault(); 
+                }, false);
+
+                // Ensure canvas receives focus and mouse events
+                canvas.addEventListener("click", function() {
+                    canvas.focus();
+                }, false);
+                
+                canvas.addEventListener("mousedown", function() {
+                    canvas.focus();
+                }, false);
+                
+                // Prevent context menu on right click
+                canvas.addEventListener("contextmenu", function(e) {
+                    e.preventDefault();
+                    return false;
                 }, false);
 
                 // The container maintains 16:9 aspect ratio and scales to fit the viewport

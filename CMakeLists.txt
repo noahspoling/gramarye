@@ -248,6 +248,55 @@ else()
     FetchContent_MakeAvailable(gramarye_chunk_controller)
 endif()
 
+# Fetch or use local gramarye-clay-ui library
+if(USE_LOCAL_MODULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-clay-ui/CMakeLists.txt")
+    message(STATUS "Using local gramarye-clay-ui")
+    # Pass USE_LOCAL_MODULES to subdirectories
+    set(USE_LOCAL_MODULES ${USE_LOCAL_MODULES} CACHE BOOL "Use local module folders" FORCE)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-clay-ui gramarye-clay-ui)
+else()
+    FetchContent_Declare(
+        gramarye_clay_ui
+        GIT_REPOSITORY "https://github.com/noahspoling/gramarye-clay-ui.git"
+        GIT_TAG "main"
+        GIT_PROGRESS TRUE
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(gramarye_clay_ui)
+endif()
+
+# Fetch or use local gramarye-ui-interface library
+if(USE_LOCAL_MODULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-ui-interface/CMakeLists.txt")
+    message(STATUS "Using local gramarye-ui-interface")
+    set(USE_LOCAL_MODULES ${USE_LOCAL_MODULES} CACHE BOOL "Use local module folders" FORCE)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-ui-interface gramarye-ui-interface)
+else()
+    FetchContent_Declare(
+        gramarye_ui_interface
+        GIT_REPOSITORY "https://github.com/noahspoling/gramarye-ui-interface.git"
+        GIT_TAG "master"
+        GIT_PROGRESS TRUE
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(gramarye_ui_interface)
+endif()
+
+# Fetch or use local gramarye-ui-raylib-implementation library
+if(USE_LOCAL_MODULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-ui-raylib-implementation/CMakeLists.txt")
+    message(STATUS "Using local gramarye-ui-raylib-implementation")
+    set(USE_LOCAL_MODULES ${USE_LOCAL_MODULES} CACHE BOOL "Use local module folders" FORCE)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gramarye-ui-raylib-implementation gramarye-ui-raylib-impl)
+else()
+    FetchContent_Declare(
+        gramarye_ui_raylib
+        GIT_REPOSITORY "https://github.com/noahspoling/gramarye-ui-raylib-implementation.git"
+        GIT_TAG "master"
+        GIT_PROGRESS TRUE
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(gramarye_ui_raylib)
+endif()
+
 # Configure renderer-raylib after it's created
 if(TARGET gramarye-renderer-raylib)
     target_link_libraries(gramarye-renderer-raylib PUBLIC raylib)
@@ -259,6 +308,19 @@ if(TARGET gramarye-renderer-raylib)
     # Make renderer headers available to renderer-raylib (from gramarye/include/renderer)
     # Also make clay headers available (clay.h is in gramarye/include)
     target_include_directories(gramarye-renderer-raylib PUBLIC 
+        ${CMAKE_CURRENT_SOURCE_DIR}/include)
+endif()
+
+# Configure ui-raylib after it's created
+if(TARGET gramarye-ui-raylib)
+    target_link_libraries(gramarye-ui-raylib PUBLIC raylib)
+    # Make raylib headers available to ui-raylib
+    FetchContent_GetProperties(raylib)
+    if(raylib_POPULATED)
+        target_include_directories(gramarye-ui-raylib PRIVATE ${raylib_SOURCE_DIR}/src)
+    endif()
+    # Make clay headers available (clay.h is in gramarye/include)
+    target_include_directories(gramarye-ui-raylib PUBLIC 
         ${CMAKE_CURRENT_SOURCE_DIR}/include)
 endif()
 
@@ -357,9 +419,12 @@ target_link_libraries(game PUBLIC
     gramarye-renderer-interface  # Renderer interface library
     gramarye-component-functions  # This transitively includes gramarye-components
     gramarye-renderer-raylib  # Raylib renderer implementation
+    gramarye-ui-interface  # UI interface library
+    gramarye-ui-raylib  # Raylib UI implementation
     gramarye-event-bus  # Event bus system
     gramarye-chunk-controller  # Chunk update/management system
     gramarye-chunk-renderer  # Chunk render system
+    gramarye-clay-ui  # Clay UI component library
     # Note: gramarye-components is linked via gramarye-component-functions
     # to ensure correct include path order (component-functions headers come first)
 )

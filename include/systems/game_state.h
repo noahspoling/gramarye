@@ -28,6 +28,7 @@
 
 #include "gramarye_chunk_renderer/chunk_render_system.h"
 #include "gramarye_renderer/renderer.h"  // Renderer interface
+#include "gramarye_ui/ui_provider.h"  // UI provider interface
 #include "camera.h"  // Required for Camera2DEx and AspectFit used by chunk renderer
 #include "gramarye_event_bus/event_bus.h"  // EventBus
 #include "gramarye_chunk_controller/tile_update_queue.h"  // TileUpdateQueue
@@ -49,6 +50,7 @@ typedef struct GameState {
     EntityId player;
 
     Renderer* renderer;  // Renderer interface
+    UIProvider* uiProvider;  // UI provider interface
     Camera2DEx cam;
     ChunkRenderSystem chunkRenderer;
     
@@ -63,6 +65,19 @@ typedef struct GameState {
     bool hasLastClick;
     int lastClickTileX;
     int lastClickTileY;
+
+    // Turn tracking
+    uint32_t turnCount;  // Current turn number (increments on movement)
+
+    // UI popup state
+    struct ClayUI_PopupState* popupState;
+    
+    // UI fonts (array of Font, allocated in arena)
+    Font* uiFonts;
+    int uiFontCount;
+    
+    // UI click blocking
+    bool uiBlockingClick;
 } GameState;
 
 #endif // GAME_STATE_H

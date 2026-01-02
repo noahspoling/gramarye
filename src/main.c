@@ -1,9 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "raylib.h"  // Still needed for Vector2 type used by GameSystem
-#define CLAY_IMPLEMENTATION
-#include "clay.h"
-#include "clay_renderer_raylib.h"  // Now from gramarye-raylib-implementation
+#include "raylib.h"
 #include "arena.h"
 #include "assert.h"
 
@@ -12,21 +9,14 @@
 #include "gramarye_renderer/renderer.h"
 #include "renderer_raylib.h"
 #include "input_raylib.h"
+#include "gramarye_ui/ui_provider.h"
+#include "ui_provider_raylib.h"
 
 #define TILE_SIZE 16
 #define MAP_SIZE 128
 
-const Clay_Color COLOR_LIGHT = (Clay_Color){224, 215, 210, 255};
-const Clay_Color COLOR_RED = (Clay_Color){168, 66, 28, 255};
-const Clay_Color COLOR_ORANGE = (Clay_Color){255, 138, 50, 255};
-const Clay_Color COLOR_WHITE = (Clay_Color){ .r = 255, .g = 255, .b = 255};
-const Clay_Color COLOR_DARK = (Clay_Color){100, 100, 100, 255};
-
 const float ScreenWidth = 1600.0f;
 const float ScreenHeight = 900.0f;
-
-void clay_assertion_callback(Clay_ErrorData errorText) {
-}
 
 int main(void) {
     Renderer* renderer = RendererRaylib_create();
@@ -39,20 +29,36 @@ int main(void) {
                   Renderer_get_default_window_flags() | WINDOW_FLAG_BORDERLESS);
 
     SetTraceLogLevel(LOG_DEBUG);
-    uint64_t clayMemorySize = Clay_MinMemorySize();
-    Clay_Arena memoryArena = {
-        .memory = malloc(clayMemorySize),
-        .capacity = clayMemorySize,
+    
+    UIProvider* uiProvider = UIProviderRaylib_create();
+    if (!uiProvider) {
+        fprintf(stderr, "Failed to create UI provider\n");
+        Renderer_close(renderer);
+        RendererRaylib_destroy(renderer);
+        return 1;
+    }
+    
+    size_t uiMemorySize = UIProvider_get_memory_size();
+    void* uiMemory = malloc(uiMemorySize);
+    if (!uiMemory) {
+        fprintf(stderr, "Failed to allocate UI memory\n");
+        UIProviderRaylib_destroy(uiProvider);
+        Renderer_close(renderer);
+        RendererRaylib_destroy(renderer);
+        return 1;
+    }
+    
+    int renderWidth = Renderer_get_render_width(renderer);
+    int renderHeight = Renderer_get_render_height(renderer);
+    UIDimensions dimensions = {
+        .width = (float)renderWidth,
+        .height = (float)renderHeight,
     };
-    Clay_Dimensions  dimentions = {
-        .width = ScreenWidth,
-        .height = ScreenHeight,
-    };
-    Clay_ErrorHandler errorHandler = {
-        .errorHandlerFunction = clay_assertion_callback,
+    UIErrorHandler errorHandler = {
+        .errorHandlerFunction = NULL,
         .userData = NULL
     };
-    Clay_Initialize(memoryArena, dimentions, errorHandler);
+    UIProvider_initialize(uiProvider, uiMemory, uiMemorySize, dimensions, &errorHandler);
 
     Arena_T arena = Arena_new();
 
@@ -65,7 +71,7 @@ int main(void) {
     }
 
     RenderVector2 windowSize = Renderer_get_window_size(renderer);
-    GameSystem* game = GameSystem_create(arena, MAP_SIZE, TILE_SIZE, (Vector2){ windowSize.x, windowSize.y }, renderer, inputProvider);
+    GameSystem* game = GameSystem_create(arena, MAP_SIZE, TILE_SIZE, (Vector2){ windowSize.x, windowSize.y }, renderer, inputProvider, uiProvider);
 
     while (!Renderer_should_close(renderer)) {
         float dt = Renderer_get_delta_time(renderer);
@@ -86,6 +92,8 @@ int main(void) {
 
     GameSystem_destroy(game);
     InputProviderRaylib_destroy(inputProvider);
+    UIProvider_shutdown(uiProvider);
+    UIProviderRaylib_destroy(uiProvider);
     Renderer_close(renderer);
     RendererRaylib_destroy(renderer);
 

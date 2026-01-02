@@ -2,9 +2,19 @@
 
 #include "raylib.h"
 
+#include "systems/game_state.h"
+#include "gramarye_ui/ui_provider.h"
+#include "ui_provider_raylib.h"
 #include "clay_renderer_raylib.h"
 
-#include "systems/game_state.h"
+Clay_Dimensions Raylib_MeasureText(Clay_StringSlice text, Clay_TextElementConfig *config, void *userData);
+
+static UIDimensions raylib_measure_text_wrapper(void* text, void* config, void* userData) {
+    Clay_StringSlice* textSlice = (Clay_StringSlice*)text;
+    Clay_TextElementConfig* textConfig = (Clay_TextElementConfig*)config;
+    Clay_Dimensions result = Raylib_MeasureText(*textSlice, textConfig, userData);
+    return (UIDimensions){.width = result.width, .height = result.height};
+}
 #include "systems/input_system.h"
 #include "systems/movement_system.h"
 #include "systems/camera_system.h"
@@ -12,9 +22,11 @@
 #include "systems/render_system.h"
 #include "systems/ui_system.h"
 #include "gramarye_event_bus/event_bus.h"
+#include "gramarye_renderer/renderer.h"
 #include "gramarye_chunk_controller/tile_update_queue.h"
 #include "gramarye_chunk_renderer/chunk_render_system.h"
 #include "gramarye_chunk_controller/chunk_manager_system.h"
+#include "gramarye_clay_ui/popup.h"
 #include "camera.h"
 
 #include "core/position.h"
@@ -90,14 +102,17 @@ static void init_camera(GameState* s, Vector2 logicalSize) {
     s->cam.pos.y = py - viewH * 0.5f;
 }
 
-GameSystem* GameSystem_create(Arena_T arena, int mapSize, int tileSize, Vector2 logicalSize, Renderer* renderer, InputProvider* inputProvider) {
+GameSystem* GameSystem_create(Arena_T arena, int mapSize, int tileSize, Vector2 logicalSize, Renderer* renderer, InputProvider* inputProvider, UIProvider* uiProvider) {
     GameSystem* g = (GameSystem*)Arena_alloc(arena, sizeof(GameSystem), __FILE__, __LINE__);
     g->state.arena = arena;
     g->state.mapSize = mapSize;
     g->state.tileSize = tileSize;
     g->state.renderer = renderer;
+    g->state.uiProvider = uiProvider;
     g->state.debug = false;
     g->state.hasLastClick = false;
+    g->state.turnCount = 0;
+    g->state.uiBlockingClick = false;
 
     init_atlas(&g->state);
     init_tilemap(&g->state);
@@ -130,6 +145,25 @@ GameSystem* GameSystem_create(Arena_T arena, int mapSize, int tileSize, Vector2 
     
     init_camera(&g->state, logicalSize);
 
+    g->state.popupState = (struct ClayUI_PopupState*)Arena_alloc(arena, sizeof(struct ClayUI_PopupState), __FILE__, __LINE__);
+    ClayUI_PopupInit(g->state.popupState);
+    ClayUI_PopupShow(g->state.popupState);
+
+    g->state.uiFontCount = 1;
+    g->state.uiFonts = (Font*)Arena_alloc(arena, sizeof(Font) * g->state.uiFontCount, __FILE__, __LINE__);
+    g->state.uiFonts[0] = LoadFont("../resources/font/Roboto-VariableFont_wdth,wght.ttf");
+    if (!g->state.uiFonts[0].glyphs) {
+        g->state.uiFonts[0] = LoadFont("resources/font/Roboto-VariableFont_wdth,wght.ttf");
+    }
+    if (!g->state.uiFonts[0].glyphs) {
+        g->state.uiFonts[0] = GetFontDefault();
+        TraceLog(LOG_WARNING, "Failed to load Roboto font, using default font");
+    } else {
+        TraceLog(LOG_INFO, "Loaded Roboto font successfully");
+    }
+
+    UIProvider_set_measure_text_function(g->state.uiProvider, raylib_measure_text_wrapper, g->state.uiFonts);
+
     g->input = InputSystem_create(arena, inputProvider);
 
     return g;
@@ -139,6 +173,13 @@ void GameSystem_destroy(GameSystem* g) {
     if (!g) return;
     InputSystem_destroy(g->input);
     g->input = NULL;
+    if (g->state.uiFonts && g->state.uiFontCount > 0) {
+        for (int i = 0; i < g->state.uiFontCount; i++) {
+            if (g->state.uiFonts[i].glyphs && g->state.uiFonts[i].texture.id != 0) {
+                UnloadFont(g->state.uiFonts[i]);
+            }
+        }
+    }
     ChunkRenderSystem_cleanup(&g->state.chunkRenderer);
     Atlas_free(g->state.atlas);
 }
@@ -163,12 +204,27 @@ void GameSystem_frame(GameSystem* g, float dt) {
                 break;
             case Cmd_Move:
                 MovementSystem_apply_move(&g->state, cmd.as.move.dx, cmd.as.move.dy);
+                g->state.turnCount++;
                 break;
-            case Cmd_PlaceTile:
-                if (deferredCount < 64) deferredPlace[deferredCount++] = cmd;
+            case Cmd_PlaceTile: {
+                Vector2 mousePos = GetMousePosition();
+                bool mouseDown = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+                bool uiBlocking = UISystem_check_ui_blocking(&g->state, mousePos, mouseDown);
+                if (!uiBlocking) {
+                    if (deferredCount < 64) deferredPlace[deferredCount++] = cmd;
+                }
                 break;
+            }
             default:
                 break;
+        }
+    }
+
+    if (IsKeyPressed(KEY_P)) {
+        if (ClayUI_PopupIsVisible(g->state.popupState)) {
+            ClayUI_PopupHide(g->state.popupState);
+        } else {
+            ClayUI_PopupShow(g->state.popupState);
         }
     }
 
